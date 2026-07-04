@@ -236,6 +236,16 @@
   <!-- 7. 摘要 -->
   <div class="card hide" id="sumCard">
     <h2><span class="n">7</span>病歷摘要（一鍵複製）</h2>
+    <div style="margin-bottom:6px">
+      <b style="color:var(--green-d);font-size:14px">主訴摘要（50–100 字，病歷記載用）</b>
+      <span class="hint" id="ccCount" style="margin-left:8px"></span>
+    </div>
+    <textarea id="ccText" style="min-height:74px" oninput="onCCInput()"></textarea>
+    <div class="row" style="margin-top:8px;margin-bottom:16px">
+      <button class="btn-go" onclick="copyCC()">複製主訴</button>
+      <button class="btn-ghost" onclick="regenCC()">↻ 重新產生</button>
+      <span class="hint" id="ccMsg" style="margin:0"></span>
+    </div>
     <pre class="sum" id="summary"></pre>
     <div class="row">
       <button class="btn-go" onclick="copySum()">複製摘要</button>
@@ -407,8 +417,10 @@ function run(){
   initVDS(results, text);
   initVillalta(results, text);
   resetCiviq();
+  LAST.cc = genCC(); LAST.ccManual = false;
   renderQuestions(results);
   renderSummary();
+  paintCC();
   renderRubric();
   ["resultCard","vdsCard","villaltaCard","civiqCard","qCard","sumCard"]
     .forEach(id=>document.getElementById(id).classList.remove("hide"));
@@ -505,6 +517,7 @@ function override(i, v){
   chip.textContent = v; chip.className = "sc sc"+v;
   renderTotals(LAST.results);
   renderQuestions(LAST.results);
+  if(!LAST.ccManual){ LAST.cc = genCC(); paintCC(); }
   renderSummary();
 }
 
@@ -613,6 +626,7 @@ function toggleVillalta(){
   const on = document.getElementById("dvtToggle").checked;
   document.getElementById("villaltaBody").classList.toggle("hide", !on);
   if(LAST&&LAST.villalta) LAST.villalta.active = on;
+  if(LAST && !LAST.ccManual){ LAST.cc = genCC(); paintCC(); }
   renderSummary();
 }
 function renderVillalta(){
@@ -804,6 +818,99 @@ function renderQuestions(results){
 }
 
 /* ---------- 摘要 ---------- */
+/* ---------- 主訴摘要（50–100 字，病歷記載用）：由解析結果規則式組句 ---------- */
+function genCC(){
+  const raw = LAST.raw;
+  const by = {}; LAST.results.forEach(x=> by[x.dom.key]=x.score);
+  const ceap = deriveCEAP(LAST.results);
+
+  // 患側與部位
+  const both = /兩隻|兩腳|兩條腿|雙側|兩邊|兩腿|兩下肢|左右腳|左右腿/.test(raw);
+  const L=/左/.test(raw), R=/右/.test(raw);
+  const side=(both||(L&&R))?"雙側":L?"左":R?"右":"";
+  const hasCalf=/小腿/.test(raw), hasThigh=/大腿/.test(raw);
+  const loc=(hasCalf&&hasThigh)?"下肢":hasThigh?"大腿":hasCalf?"小腿":"下肢";
+
+  // 病程：年限要緊跟在血管描述附近才算，避免把潰瘍病程誤掛到靜脈曲張
+  let dur="";
+  const dm = raw.match(/(?:青筋|靜脈曲張|血管|蜘蛛絲)[^。，,]{0,6}?(好幾年|十幾年|幾年|多年|[0-9一二三四五六七八九十]+年)/);
+  if(dm) dur = /^(好幾年|幾年|多年|十幾年)$/.test(dm[1]) ? "多年" : dm[1]+"餘";
+
+  const seg=[];
+  if(LAST.villalta && LAST.villalta.active) seg.push("有DVT病史");
+  const spider=/蜘蛛|微血管|網狀/.test(raw);
+  if(by.veins>0 && !spider) seg.push(side+loc+"靜脈曲張"+dur);
+  else if(spider) seg.push(side+loc+"微血管絲擴張"+dur);
+
+  const daily=/天天|每天|每日/.test(raw), std=/久站|站久|走久|久坐/.test(raw), pm=/下午|傍晚|晚上/.test(raw);
+  const im = raw.match(/影響(工作|上班|睡眠|走路|生活|日常|活動)/);
+  if(by.pain===3) seg.push("每日疼痛需止痛藥且明顯影響活動");
+  else if(by.pain===2) seg.push((daily?"每日":std?"久站後":"")+"痠脹沉重"+(im?"、影響"+im[1]:""));
+  else if(by.pain===1) seg.push((std?"久站後":"")+"偶有痠脹");
+
+  if(by.edema===3) seg.push("水腫達膝上");
+  else if(by.edema===2) seg.push((pm?"午後":"")+"小腿水腫");
+  else if(by.edema===1) seg.push((pm?"午後":"")+"足踝水腫"+(/早上|晨|隔天/.test(raw)?"、晨起消退":""));
+
+  const skin=[];
+  if(by.pigment>0) skin.push((by.pigment>=2?"小腿":"踝周")+"色素沉著");
+  if(by.indur>0) skin.push("皮膚硬化");
+  if(by.inflam>0) skin.push("濕疹搔癢");
+  if(skin.length) seg.push(skin.join("、"));
+
+  if(by.ulcerN>0){
+    const n=by.ulcerN>=3?"多處":by.ulcerN===2?"兩處":"一處";
+    const t=by.ulcerT===3?"逾年未癒":by.ulcerT===2?"數月未癒":"";
+    seg.push(n+"活動性潰瘍"+t);
+  } else if(ceap.c==="C5") seg.push("曾有潰瘍已癒合");
+
+  if(/不好看|難看|美觀|外觀/.test(raw)) seg.push("並有外觀困擾");
+  if(by.comp>0) seg.push(["","偶爾","經常","規律"][by.comp]+"使用彈性襪");
+  if(!seg.length) seg.push("下肢無明顯靜脈疾病相關症狀");
+
+  // 過長：先捨彈性襪，再捨修飾語
+  let parts=seg.slice();
+  let out=parts.join("，")+"。";
+  if(out.length>100){ parts=parts.filter(s=>!s.includes("彈性襪")); out=parts.join("，")+"。"; }
+  if(out.length>100) out=out.replace("、晨起消退","");
+
+  // 過短：補臨床上有意義的陰性所見
+  const negs=[];
+  if(by.pain===0) negs.push("無疼痛");
+  if(by.edema===0) negs.push("無明顯水腫");
+  if(by.pigment===0&&by.indur===0&&by.inflam===0) negs.push("無皮膚變化");
+  if(by.ulcerN===0&&ceap.c!=="C5") negs.push("無潰瘍病史");
+  if(by.comp===0) negs.push("未使用彈性襪");
+  let body=out.slice(0,-1), i=0;
+  while((body+"。").length<50 && i<negs.length) body+="，"+negs[i++];
+  return body+"。";
+}
+function paintCC(){
+  document.getElementById("ccText").value = LAST.cc||"";
+  ccCountPaint();
+}
+function ccCountPaint(){
+  const n=(LAST.cc||"").length;
+  const el=document.getElementById("ccCount");
+  el.textContent = n?`${n} 字${n<50?"・偏短":n>100?"・偏長":""}`:"";
+  el.style.color = (n<50||n>100)?"#c98a3a":"#6b7d75";
+}
+function onCCInput(){
+  LAST.cc=document.getElementById("ccText").value;
+  LAST.ccManual=true;
+  ccCountPaint(); renderSummary();
+}
+function regenCC(){
+  LAST.cc=genCC(); LAST.ccManual=false; paintCC(); renderSummary();
+}
+function copyCC(){
+  navigator.clipboard.writeText(LAST.cc||"").then(()=>{
+    const m=document.getElementById("ccMsg");
+    m.textContent="✓ 已複製"; m.style.color="#3f7d5c";
+    setTimeout(()=>m.textContent="",2500);
+  });
+}
+
 function renderSummary(){
   const r = LAST.results;
   const total = r.reduce((a,x)=>a+x.score,0);
@@ -830,7 +937,9 @@ function renderSummary(){
   }
 
   const txt =
-`【VCSS 靜脈臨床嚴重度評分】
+`主訴：${LAST.cc||""}
+
+【VCSS 靜脈臨床嚴重度評分】
 VCSS 總分：${total} / 30（${sevText(total)}）
 逐項：
 ${lines}
