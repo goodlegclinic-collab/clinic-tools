@@ -1,0 +1,964 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VCSS · CEAP 主訴自動評分工具｜富足診所</title>
+<style>
+  :root{
+    --ink:#2b3a34; --muted:#6b7d75; --line:#dfe7e2;
+    --bg:#f4f7f5; --card:#ffffff; --green:#3f7d5c; --green-d:#2f5f46;
+    --amber:#c98a3a; --red:#c05545; --blue:#4a6d8c; --chip:#eef3f0;
+    --s0:#e7efe9; --s1:#fdf3e3; --s2:#f7e2d6; --s3:#f3d3cc;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;
+    line-height:1.6;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:960px;margin:0 auto;padding:24px 18px 80px}
+  header{text-align:center;padding:22px 0 8px}
+  header h1{margin:0;font-size:26px;letter-spacing:.5px;color:var(--green-d)}
+  header .sub{color:var(--muted);font-size:14px;margin-top:6px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;
+    padding:18px 18px;margin:16px 0;box-shadow:0 1px 3px rgba(40,70,55,.05)}
+  .card h2{margin:0 0 12px;font-size:17px;color:var(--green-d);
+    display:flex;align-items:center;gap:8px}
+  .card h2 .n{background:var(--green);color:#fff;width:24px;height:24px;border-radius:50%;
+    display:inline-flex;align-items:center;justify-content:center;font-size:13px;flex:0 0 auto}
+  textarea{width:100%;min-height:150px;border:1px solid var(--line);border-radius:10px;
+    padding:12px;font-size:15px;font-family:inherit;resize:vertical;color:var(--ink);background:#fcfdfc}
+  textarea:focus{outline:2px solid var(--green);outline-offset:1px}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
+  button{border:0;border-radius:10px;padding:11px 18px;font-size:15px;font-weight:600;
+    cursor:pointer;font-family:inherit;transition:.15s}
+  .btn-go{background:var(--green);color:#fff}
+  .btn-go:hover{background:var(--green-d)}
+  .btn-ghost{background:var(--chip);color:var(--green-d)}
+  .btn-ghost:hover{background:#e2ebe6}
+  .hint{color:var(--muted);font-size:13px;margin-top:8px}
+  .examples{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .examples span{background:var(--chip);border:1px dashed var(--line);border-radius:20px;
+    padding:5px 12px;font-size:13px;cursor:pointer;color:var(--green-d)}
+  .examples span:hover{background:#e2ebe6}
+
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{text-align:left;padding:9px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--muted);font-weight:600;font-size:12.5px;letter-spacing:.3px}
+  td.dom{font-weight:600;white-space:nowrap}
+  td.ev{color:var(--muted);font-size:13px}
+  td.ev mark{background:#fbf0cf;color:#7a5a1e;padding:0 3px;border-radius:3px}
+  select{border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:14px;
+    font-family:inherit;background:#fff;color:var(--ink)}
+  .sc{display:inline-block;min-width:22px;text-align:center;border-radius:6px;
+    padding:2px 8px;font-weight:700;font-size:14px}
+  .sc0{background:var(--s0);color:#3d5b4a}
+  .sc1{background:var(--s1);color:#8a6420}
+  .sc2{background:var(--s2);color:#a8552f}
+  .sc3{background:var(--s3);color:#8f342a}
+  tr.auto td{background:#fbfdfb}
+  .flag{font-size:11px;color:var(--amber);font-weight:600}
+
+  .totals{display:flex;gap:14px;flex-wrap:wrap;margin-top:6px}
+  .stat{flex:1 1 160px;background:var(--chip);border-radius:12px;padding:14px 16px;text-align:center}
+  .stat .lab{font-size:12px;color:var(--muted);letter-spacing:.5px}
+  .stat .val{font-size:30px;font-weight:800;color:var(--green-d);line-height:1.1;margin-top:2px}
+  .stat .val small{font-size:14px;color:var(--muted);font-weight:600}
+  .ceap-badge{display:inline-block;background:var(--green-d);color:#fff;font-weight:800;
+    font-size:22px;padding:3px 14px;border-radius:10px;margin-top:2px}
+
+  .qbox{background:#fbf7ef;border:1px solid #f0e4cd;border-radius:12px;padding:6px 4px}
+  .q{display:flex;gap:10px;padding:9px 12px;border-bottom:1px dashed #eadfc7}
+  .q:last-child{border-bottom:0}
+  .q .qi{color:var(--amber);font-weight:800;flex:0 0 auto}
+  .q .qt{font-size:14.5px}
+  .q .qt b{color:var(--green-d)}
+  .empty{color:var(--muted);font-size:14px;padding:10px 12px}
+
+  pre.sum{background:#f7faf8;border:1px solid var(--line);border-radius:10px;padding:14px;
+    font-size:13px;white-space:pre-wrap;word-break:break-word;
+    font-family:"SF Mono",Menlo,Consolas,monospace;color:#33443c;margin:0}
+  .legend{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.9}
+  .legend code{background:var(--chip);padding:1px 6px;border-radius:5px}
+  details{margin-top:12px}
+  summary{cursor:pointer;color:var(--green-d);font-weight:600;font-size:14px}
+  .disclaimer{font-size:12px;color:var(--muted);text-align:center;margin-top:26px;line-height:1.7}
+  .hide{display:none}
+  .intake-grp{margin:0 0 14px}
+  .intake-grp h4{margin:0 0 6px;font-size:14.5px;color:var(--blue);
+    border-left:3px solid var(--blue);padding-left:8px}
+  .intake-grp ul{margin:0;padding-left:20px}
+  .intake-grp li{font-size:14px;margin:3px 0;color:#33443c}
+  .intake-grp li .tag{font-size:11px;color:#93a29a;margin-left:4px}
+  .q5{background:#f2f6f9;border:1px solid #dbe5ec;border-radius:12px;padding:10px 14px;margin-bottom:12px}
+  .q5 h3{margin:0 0 6px;font-size:14px;color:var(--blue)}
+  .q5 ol{margin:0;padding-left:22px}
+  .q5 li{font-size:14px;margin:5px 0}
+  .q5 li b{color:var(--green-d)}
+  .q5 li .t5{font-size:11px;color:#8fa3b3;margin-left:6px;white-space:nowrap}
+  #micBtn.rec{background:#c05545;color:#fff;animation:pulse 1.2s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}
+  .interim{color:var(--muted);font-size:13px;font-style:italic;margin-top:6px;min-height:18px}
+  @media(max-width:600px){
+    th.ev-h,td.ev{display:none}
+    header h1{font-size:21px}
+  }
+  @media print{
+    body{background:#fff}
+    .card{box-shadow:none;border-color:#ccc;break-inside:avoid}
+    #input,.examples,.row,.disclaimer .noprint{display:none}
+    #intakeBody{display:block!important}
+  }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>VCSS · CEAP 主訴自動評分</h1>
+    <div class="sub">貼上病人主訴 → 自動抓出靜脈曲張嚴重度分數與證據 · 富足診所血管醫學</div>
+  </header>
+
+  <!-- 1. 輸入 -->
+  <div class="card">
+    <h2><span class="n">1</span>貼上病人主訴（口語、台語直翻、片段都可以）</h2>
+    <div class="q5">
+      <h3>門診快速五問 — 開著語音、照這五題問完，就能算完四套分數</h3>
+      <ol>
+        <li>腳會<b>痠、脹、痛或沉重</b>嗎？<b>偶爾還是每天</b>？要不要<b>吃止痛藥</b>、會不會<b>影響工作</b>？<span class="t5">疼痛・VDS</span></li>
+        <li>腿上有沒有<b>浮出來的青筋</b>？在<b>小腿、大腿還是都有</b>？還是只有<b>細細的蜘蛛絲</b>？<span class="t5">靜脈曲張・C1/C2</span></li>
+        <li>腳會<b>腫</b>嗎？腫到<b>腳踝、小腿、還是膝蓋以上</b>？<b>下午</b>比較明顯嗎？<span class="t5">水腫・C3</span></li>
+        <li>皮膚有沒有<b>變黑、變硬、會癢</b>？現在或以前<b>破過傷口</b>嗎？<b>好了沒？多久？多大？</b><span class="t5">皮膚・潰瘍・C4–C6</span></li>
+        <li>有沒有在<b>穿彈性襪</b>？多常穿？以前有沒有得過<b>深部靜脈血栓（DVT）</b>？<span class="t5">壓力治療・Villalta 開關</span></li>
+      </ol>
+    </div>
+    <textarea id="input" placeholder="例：左腳小腿這幾年浮出一條一條的青筋，站久了會痠脹，下午腳踝腫起來，穿襪子會勒出一圈。皮膚踝關節附近變咖啡色，摸起來硬硬的，之前有破過一個傷口好了…"></textarea>
+    <div class="examples" id="examples"></div>
+    <div class="row">
+      <button class="btn-go" onclick="run()">自動評分 →</button>
+      <button class="btn-ghost" id="micBtn" onclick="toggleVoice()">🎤 語音輸入</button>
+      <button class="btn-ghost" onclick="clearAll()">清空</button>
+    </div>
+    <div class="interim" id="voiceInterim"></div>
+    <div class="hint">🎤 按下開始講（問診對話直接收音也行），辨識文字會即時貼進上方；按「⏹ 停止並評分」就直接算分。Chrome／Edge 需允許麥克風（建議以 localhost 或 https 開啟）；也可以點進輸入框改用 <strong>macOS 內建聽寫（連按兩下 🎤／fn 鍵）</strong>。解析結果是<strong>初稿</strong>，每一項都可下拉覆寫，以臨床判斷為準。</div>
+  </div>
+
+  <!-- 2. 結果 -->
+  <div class="card hide" id="resultCard">
+    <h2><span class="n">2</span>VCSS 評分（十項，每項 0–3）</h2>
+    <div style="overflow-x:auto">
+    <table id="vcssTable">
+      <thead><tr>
+        <th>項目</th><th style="width:120px">分數</th>
+        <th class="ev-h">命中證據</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+    </div>
+    <div class="totals" style="margin-top:16px">
+      <div class="stat"><div class="lab">VCSS 總分</div>
+        <div class="val"><span id="vcssTotal">0</span><small> / 30</small></div></div>
+      <div class="stat"><div class="lab">嚴重度</div>
+        <div class="val" id="vcssSeverity" style="font-size:22px;padding-top:8px">—</div></div>
+      <div class="stat"><div class="lab">CEAP 臨床分級（推定）</div>
+        <div><span class="ceap-badge" id="ceapBadge">C?</span></div>
+        <div class="hint" id="ceapDesc" style="margin-top:6px"></div></div>
+    </div>
+    <div class="legend">
+      <code>C0</code> 無 · <code>C1</code> 微血管／網狀 · <code>C2</code> 靜脈曲張 ·
+      <code>C3</code> 水腫 · <code>C4a</code> 色素沉著／濕疹 · <code>C4b</code> 脂性皮膚硬化／白色萎縮 ·
+      <code>C5</code> 已癒合潰瘍 · <code>C6</code> 活動性潰瘍。
+      CEAP 完整分級尚需 E（病因）/A（解剖）/P（病理），需靠都卜勒超音波，非主訴可得。
+    </div>
+  </div>
+
+  <!-- 3. VDS 靜脈失能評分 -->
+  <div class="card hide" id="vdsCard">
+    <h2><span class="n">3</span>VDS 靜脈失能評分（功能面，0–3）</h2>
+    <div class="row" style="margin-top:0;align-items:center">
+      <span class="sc" id="vdsChip" style="font-size:18px;min-width:30px">0</span>
+      <select id="vdsSelect" onchange="setVDS(this.value)" style="flex:1 1 auto;max-width:520px">
+        <option value="0">0 — 無症狀</option>
+        <option value="1">1 — 有症狀，但不需壓力治療即可維持日常活動</option>
+        <option value="2">2 — 需靠彈性襪／抬腳才能維持日常活動</option>
+        <option value="3">3 — 即使彈性襪＋抬腳仍無法維持日常活動</option>
+      </select>
+    </div>
+    <div class="ev" id="vdsEvidence" style="margin-top:8px"></div>
+    <div class="legend">「日常活動」以病人發病前的活動能力為基準。此項由主訴中的功能影響字句自動初判，請按實際狀況覆寫。</div>
+  </div>
+
+  <!-- 4. Villalta（血栓後症候群 PTS） -->
+  <div class="card hide" id="villaltaCard">
+    <h2><span class="n">4</span>Villalta 評分 · 血栓後症候群（PTS）</h2>
+    <label style="display:flex;gap:9px;align-items:center;cursor:pointer;font-size:14.5px;color:#2f5f46">
+      <input type="checkbox" id="dvtToggle" onchange="toggleVillalta()" style="width:17px;height:17px">
+      此病人有<strong>深部靜脈血栓（DVT）病史</strong> → 啟用 Villalta 評估血栓後症候群
+    </label>
+    <div id="villaltaBody" class="hide">
+      <div class="hint" style="margin:10px 0 4px">5 項症狀（病人自述）＋ 6 項徵象（理學檢查），每項 0–3。能從主訴帶入的已預填，其餘（尤其小腿壓痛）請理學檢查後補。</div>
+      <div style="overflow-x:auto">
+      <table id="villaltaTable"><thead><tr>
+        <th>項目</th><th style="width:150px">分數</th><th class="ev-h">來源／證據</th>
+      </tr></thead><tbody></tbody></table>
+      </div>
+      <div class="totals" style="margin-top:14px">
+        <div class="stat"><div class="lab">Villalta 總分</div>
+          <div class="val"><span id="villaltaTotal">0</span><small> / 33</small></div></div>
+        <div class="stat"><div class="lab">PTS 分級</div>
+          <div class="val" id="villaltaGrade" style="font-size:20px;padding-top:9px">—</div></div>
+      </div>
+      <div class="legend"><code>&lt;5</code> 無 PTS · <code>5–9</code> 輕度 · <code>10–14</code> 中度 · <code>≥15 或有靜脈潰瘍</code> 重度。Villalta 僅適用於曾患 DVT 之患肢。</div>
+    </div>
+  </div>
+
+  <!-- 5. CIVIQ-20 生活品質 -->
+  <div class="card hide" id="civiqCard">
+    <h2><span class="n">5</span>CIVIQ-20 生活品質問卷（病人自填，20 題 × 1–5 分）</h2>
+    <div class="totals" style="margin-top:0">
+      <div class="stat"><div class="lab">CIVIQ 總指數（GIS）</div>
+        <div class="val"><span id="civiqGIS">0</span><small> / 100</small></div></div>
+      <div class="stat"><div class="lab">四面向（0–100，越高影響越大）</div>
+        <div class="hint" id="civiqDims" style="margin-top:8px">—</div></div>
+    </div>
+    <div class="row">
+      <button class="btn-ghost" id="civiqBtn" onclick="toggleCiviqBody()">展開 20 題填寫 ▾</button>
+    </div>
+    <div id="civiqBody" class="hide" style="margin-top:10px;overflow-x:auto">
+      <table id="civiqTable"><thead><tr>
+        <th style="width:52px">面向</th><th>題目（以過去四週為準）</th>
+        <th style="width:190px">1 完全不會 → 5 非常嚴重</th>
+      </tr></thead><tbody></tbody></table>
+    </div>
+    <div class="legend">意譯參考版，供門診快篩與追蹤趨勢；正式研究請使用官方授權之中文版（civiq-20.com）。可交給病人在候診時自填（平板）。</div>
+  </div>
+
+  <!-- 6. 需要補問的問題 -->
+  <div class="card hide" id="qCard">
+    <h2><span class="n">6</span>建議補問（把主訴沒交代清楚的地方問齊，分數才站得住）</h2>
+    <div class="qbox" id="qList"></div>
+  </div>
+
+  <!-- 7. 摘要 -->
+  <div class="card hide" id="sumCard">
+    <h2><span class="n">7</span>病歷摘要（一鍵複製）</h2>
+    <pre class="sum" id="summary"></pre>
+    <div class="row">
+      <button class="btn-go" onclick="copySum()">複製摘要</button>
+      <span class="hint" id="copyMsg" style="margin:0"></span>
+    </div>
+    <details>
+      <summary>VCSS 十項評分標準速查</summary>
+      <div class="legend" id="rubric" style="margin-top:10px"></div>
+    </details>
+  </div>
+
+  <!-- 完整問診總表（無主訴時可直接照著問） -->
+  <div class="card" id="intakeCard">
+    <h2><span class="n" style="background:var(--blue)">＋</span>完整問診總表（沒有主訴時，照著問就能補齊四套評分）</h2>
+    <div class="hint" style="margin-top:0">涵蓋 VCSS／CEAP／VDS／Villalta 所需的全部欄位。可直接對病人逐條詢問，或列印成初診問卷。</div>
+    <div class="row">
+      <button class="btn-ghost" onclick="toggleIntake()" id="intakeBtn">展開問診總表 ▾</button>
+      <button class="btn-ghost" onclick="copyIntake()">複製全部問題</button>
+      <button class="btn-ghost" onclick="window.print()">列印</button>
+      <span class="hint" id="intakeMsg" style="margin:0"></span>
+    </div>
+    <div id="intakeBody" class="hide" style="margin-top:14px"></div>
+  </div>
+
+  <div class="disclaimer">
+    本工具依 Revised VCSS（2010）、CEAP、VDS、Villalta（PTS）與 CIVIQ-20（意譯參考）製作，為臨床輔助初稿工具，不取代醫師診斷。<br>
+    活動性潰瘍、感染、深部靜脈血栓等徵象請以理學檢查與影像為準。© 富足診所血管醫學
+  </div>
+</div>
+
+<script>
+/* ---------- VCSS 十項定義：關鍵字 → 分數，附評分標準 ---------- */
+/* 每項 rules 由高分到低分排序，命中即取；hit 記錄命中詞供證據標示 */
+const DOMAINS = [
+  {
+    key:"pain", name:"疼痛／不適",
+    rubric:["0 無","1 偶爾、不影響活動、不需止痛藥","2 每日、中度影響活動、偶爾止痛藥","3 每日、明顯限制活動、規律止痛藥"],
+    rules:[
+      {s:3, kw:["天天痛","每天痛","痛到不能","痛到睡不著","一直吃止痛","規律止痛","規律吃止痛","天天吃止痛","無法走","站不住","痛得受不了","痛到受不了","嚴重痠痛","痛到影響"]},
+      {s:2, kw:["每天","每日","天天","下午就","傍晚就","影響工作","影響活動","影響上班","要吃止痛","需要止痛","吃止痛藥","止痛藥才"]},
+      {s:1, kw:["站久","走久","久站","久坐","痠脹","脹痛","痠痛","痠麻","沉重","腳很重","悶痛","抽筋","痠一下","微痠","有點不舒服","會痠","會脹","痠","脹"]},
+    ],
+    qs:["疼痛是<b>每天</b>還是<b>偶爾</b>？","痛到需要<b>吃止痛藥</b>嗎？頻率？","會<b>影響日常活動／工作</b>嗎？"]
+  },
+  {
+    key:"veins", name:"靜脈曲張",
+    rubric:["0 無","1 少數、散在","2 侷限於小腿或大腿","3 小腿＋大腿都有"],
+    rules:[
+      {s:3, kw:["整條腿都是","大腿到小腿","小腿和大腿","小腿跟大腿","大腿也有","大腿小腿都","蔓延","滿腿","很多條","一堆青筋","一大片青筋","一大片血管"]},
+      {s:2, kw:["一條一條","一條條","浮出","浮起","蚯蚓","凸起","凸出","彎曲的血管","靜脈曲張","青筋凸","青筋浮","血管突出","血管凸","團塊","一整條青筋","蟠曲"]},
+      {s:1, kw:["幾條","一兩條","一兩條青筋","少數","散在","一小段","一點點血管","蜘蛛網","蜘蛛絲","微血管","網狀","細血管","細細的血管"]},
+    ],
+    qs:["曲張血管是在<b>小腿、大腿、還是兩處都有</b>？","是<b>凸出的靜脈曲張</b>還是細的蜘蛛絲／微血管？"]
+  },
+  {
+    key:"edema", name:"靜脈性水腫",
+    rubric:["0 無","1 侷限足與踝","2 踝以上、膝以下","3 到膝或膝以上"],
+    rules:[
+      {s:3, kw:["整條腿腫","腫到膝","膝蓋腫","小腿都腫","腫到大腿"]},
+      {s:2, kw:["小腿腫","腳腫","腫到小腿","脛前腫","按下去凹","水腫"]},
+      {s:1, kw:["腳踝腫","踝腫","腳背腫","下午腫","下午會腫","傍晚腫","傍晚會腫","站久會腫","會腫","襪子勒","勒出一圈","勒痕","消腫","晚上會腫"]},
+    ],
+    qs:["水腫<b>最高到哪裡</b>（腳踝／小腿／膝蓋以上）？","是<b>下午／久站後才腫、早上消退</b>嗎？"]
+  },
+  {
+    key:"pigment", name:"色素沉著",
+    rubric:["0 無或局部淡","1 侷限踝周","2 瀰漫於小腿下1/3","3 分布高於小腿下1/3"],
+    rules:[
+      {s:3, kw:["整個小腿變","整個小腿黑","整個小腿又黑","小腿大片變色","色素很廣","大範圍變黑","小腿都變咖啡","滿小腿黑"]},
+      {s:2, kw:["小腿變黑","小腿變咖啡","小腿發黑","一片變色","一大片變色","瀰漫","小腿下段變","小腿下段黑"]},
+      {s:1, kw:["咖啡色","變咖啡","變黑","又黑","變深","色素沉","色素","發黑","暗沉","著色","變色","一圈黑","黑一圈"]},
+    ],
+    qs:["皮膚變色<b>範圍多大</b>（只在踝周／小腿下段／更高）？"]
+  },
+  {
+    key:"inflam", name:"發炎（濕疹／潮紅）",
+    rubric:["0 無","1 侷限踝周","2 瀰漫小腿下1/3","3 高於小腿下1/3"],
+    rules:[
+      {s:3, kw:["整片紅腫","大範圍濕疹","小腿都紅"]},
+      {s:2, kw:["一片紅","瀰漫紅","小腿濕疹","滲液"]},
+      {s:1, kw:["癢","濕疹","紅疹","脫皮","泛紅","潮紅","皮膚癢","發炎","起疹","紅腫","會抓"]},
+    ],
+    qs:["皮膚會<b>癢／紅／脫皮（鬱血性濕疹）</b>嗎？範圍多大？"]
+  },
+  {
+    key:"indur", name:"硬化（脂性皮膚硬化）",
+    rubric:["0 無","1 侷限踝周","2 小腿下1/3","3 高於小腿下1/3"],
+    rules:[
+      {s:3, kw:["整段硬","大範圍硬","小腿都硬","整個小腿硬","整個小腿又黑又硬"]},
+      {s:2, kw:["一片硬","小腿變硬","小腿又硬","瀰漫硬化","小腿下段硬"]},
+      {s:1, kw:["硬硬的","變硬","又硬","硬塊","繃緊","皮膚緊","脂性硬化","摸起來硬","硬邦邦","硬梆梆","僵硬","結痂硬"]},
+    ],
+    qs:["踝上方皮膚摸起來<b>會硬、繃緊（脂性皮膚硬化）</b>嗎？"]
+  },
+  {
+    key:"ulcerN", name:"活動性潰瘍｜數目",
+    rubric:["0 無","1 一個","2 兩個","3 ≥3個"],
+    rules:[
+      {s:3, kw:["三個傷口","好幾個潰瘍","多處潰瘍","多個傷口"]},
+      {s:2, kw:["兩個傷口","兩處潰瘍","2個傷口"]},
+      {s:1, kw:["有傷口","潰瘍","破皮沒好","爛一個洞","傷口沒好","開放性傷口","流湯","化膿的傷口","一個傷口","潰爛"]},
+    ],
+    qs:["目前有<b>幾個沒癒合的傷口／潰瘍</b>？"],
+    ulcer:true
+  },
+  {
+    key:"ulcerT", name:"活動性潰瘍｜持續時間",
+    rubric:["0 無","1 <3個月","2 3–12個月","3 >12個月"],
+    rules:[
+      {s:3, kw:["好幾年沒好","一年多沒好","一年多都沒好","一年多","超過一年","一直沒好","都沒好","很久都沒好","很久沒好","拖很久","兩年了","好幾年"]},
+      {s:2, kw:["幾個月沒好","半年沒好","三四個月","好幾個月","幾個月了"]},
+      {s:1, kw:["最近破","前陣子破","這幾週","這幾天","剛破","新的傷口","前幾天破"]},
+    ],
+    qs:["若有潰瘍，<b>持續多久沒癒合</b>？（<3月／3–12月／>1年）"],
+    ulcer:true
+  },
+  {
+    key:"ulcerS", name:"活動性潰瘍｜大小",
+    rubric:["0 無","1 <2cm","2 2–6cm","3 >6cm"],
+    rules:[
+      {s:3, kw:["很大一個洞","比硬幣大很多","一大片潰瘍","超過六公分","巴掌大"]},
+      {s:2, kw:["硬幣大","兩三公分","銅板大","中等傷口"]},
+      {s:1, kw:["小傷口","小破洞","一點點破","小小的潰瘍"]},
+    ],
+    qs:["若有潰瘍，<b>最大直徑約幾公分</b>？"],
+    ulcer:true
+  },
+  {
+    key:"comp", name:"壓力治療使用",
+    rubric:["0 未使用","1 間歇使用","2 多數日子使用","3 完全遵從使用"],
+    rules:[
+      {s:3, kw:["每天穿彈性襪","每天都穿","每天都有穿","天天穿","天天都穿","規律穿","一直都穿","都有穿彈性襪","都有穿","完全遵從"]},
+      {s:2, kw:["常穿彈性襪","經常穿","大部分時間穿","多數時候穿","多數日子"]},
+      {s:1, kw:["偶爾穿彈性襪","偶爾穿","有時穿","買了彈性襪","有在穿","穿過彈性襪","穿彈性襪","穿壓力襪","彈性襪","壓力襪"]},
+    ],
+    qs:["有<b>穿彈性襪／使用壓力治療</b>嗎？頻率？（未用／間歇／幾乎每天／完全遵從）"]
+  },
+];
+
+/* ---------- 否定詞：命中則該項降回 0（避免「不會痛」被判成痛） ----------
+   只看關鍵字「前 3 字」的小視窗，避免「不腫但會痛」這種對比句誤傷後半症狀 */
+const NEG = ["不","沒","未","無","否認","別"];
+/* ---------- 已癒合線索：潰瘍命中後若鄰近出現，判為 C5 而非活動性 C6 ---------- */
+const HEALED = ["好了","癒合","痊癒","結疤","收口","好起來","已經好","早就好"];
+const NOT_HEALED = ["沒好","沒有好","還沒好","一直沒好","都沒好"];
+
+const EXAMPLES = [
+  {t:"典型久站族", v:"左腳小腿浮出一條一條的青筋好幾年了，站久了會痠脹，下午腳踝會腫、穿襪子勒出一圈痕，早上就消。皮膚沒變色，沒有傷口。偶爾會穿彈性襪。"},
+  {t:"進展期（皮膚變化）", v:"兩隻小腿都有彎曲凸起的血管，每天下午痠脹沉重到影響工作，要吃止痛藥。腳踝到小腿下段變咖啡色、摸起來硬硬的，有時候會癢會脫皮。之前踝內側破過一個傷口，好了。沒穿彈性襪。"},
+  {t:"活動性潰瘍", v:"右小腿靜脈曲張很多條，內踝上方有一個傷口一直流湯，一年多都沒好，大概銅板大。整個小腿又黑又硬，天天痛到睡不著、規律吃止痛藥。每天都有穿彈性襪。"},
+  {t:"很輕微", v:"小腿後面看到幾條細細的蜘蛛絲血管，不痛不腫，只是覺得不好看。"},
+];
+
+let LAST = null;
+
+/* ---------- 主流程 ---------- */
+function run(){
+  const raw = document.getElementById("input").value.trim();
+  if(!raw){ alert("請先貼上病人的主訴內容"); return; }
+  const text = normalize(raw);
+  const results = DOMAINS.map(d => scoreDomain(d, text));
+  gateUlcer(results, text);
+  LAST = {raw, results, vds:null, villalta:null};
+  // 每次評分視為新病人：重置 DVT 開關，Villalta 需重新勾選
+  document.getElementById("dvtToggle").checked = false;
+  document.getElementById("villaltaBody").classList.add("hide");
+  renderTable(results);
+  renderTotals(results);
+  initVDS(results, text);
+  initVillalta(results, text);
+  resetCiviq();
+  renderQuestions(results);
+  renderSummary();
+  renderRubric();
+  ["resultCard","vdsCard","villaltaCard","civiqCard","qCard","sumCard"]
+    .forEach(id=>document.getElementById(id).classList.remove("hide"));
+  document.getElementById("resultCard").scrollIntoView({behavior:"smooth",block:"start"});
+}
+
+function normalize(s){
+  return s.replace(/\s+/g," ")
+          .replace(/，|、|；|。|\n/g," ")
+          .toLowerCase();
+}
+
+/* 單項評分：由高分規則往低找；命中即取。
+   同一關鍵字可能在文中出現多次，逐一檢查，跳過被否定 / 已癒合的那次 */
+function scoreDomain(d, text){
+  for(const rule of d.rules){
+    for(const kw of rule.kw){
+      const low = kw.toLowerCase();
+      let from = 0, idx;
+      while((idx = text.indexOf(low, from)) >= 0){
+        from = idx + low.length;
+        if(isNegated(text, idx)) continue;                     // 「沒/不…」→ 這次不算
+        if(d.ulcer && isHealed(text, idx, low.length)) continue; // 潰瘍但已癒合 → 不算活動性
+        return {dom:d, score:rule.s, hit:kw, auto:true};
+      }
+    }
+  }
+  return {dom:d, score:0, hit:null, auto:false};
+}
+
+/* 潰瘍「持續時間 / 大小」的關鍵字（好幾年、銅板大…）容易被靜脈曲張病史等誤中，
+   因此只有在確實偵測到潰瘍時才保留分數，否則歸零 */
+function gateUlcer(results, text){
+  const byKey = {};
+  results.forEach(r=> byKey[r.dom.key]=r);
+  // 以「數目」項為準（已處理否定與已癒合）：沒有活動性潰瘍就不該有持續時間／大小分數
+  const hasUlcer = byKey.ulcerN.score>0;
+  if(!hasUlcer){
+    ["ulcerT","ulcerS"].forEach(k=>{ byKey[k].score=0; byKey[k].hit=null; byKey[k].auto=false; });
+  }
+}
+
+/* 只看關鍵字前 3 字的小視窗（含跨界的「沒有X」），命中否定詞即視為否定 */
+function isNegated(text, idx){
+  const win = text.slice(Math.max(0,idx-3), idx+1);
+  return NEG.some(n=> win.includes(n));
+}
+
+/* 潰瘍關鍵字之後 ~12 字內出現「好了/癒合」且非「沒好」→ 判為已癒合 */
+function isHealed(text, idx, len){
+  const after = text.slice(idx, idx+len+12);
+  if(NOT_HEALED.some(n=> after.includes(n))) return false;
+  return HEALED.some(h=> after.includes(h));
+}
+
+/* ---------- 表格 ---------- */
+function renderTable(results){
+  const tb = document.querySelector("#vcssTable tbody");
+  tb.innerHTML = "";
+  results.forEach((r,i)=>{
+    const tr = document.createElement("tr");
+    if(r.auto) tr.className="auto";
+    const opts = [0,1,2,3].map(v=>
+      `<option value="${v}" ${v===r.score?"selected":""}>${v} — ${r.dom.rubric[v].replace(/^\d+\s/,"")}</option>`).join("");
+    const evidence = r.hit
+      ? highlightEvidence(LAST.raw, r.hit)
+      : `<span style="color:#b9c6bf">未在主訴中偵測到　<span class="flag">建議補問</span></span>`;
+    tr.innerHTML = `
+      <td class="dom">${r.dom.name}</td>
+      <td>
+        <span class="sc sc${r.score}" id="chip-${i}">${r.score}</span>
+        <select onchange="override(${i}, this.value)" style="margin-left:8px">${opts}</select>
+      </td>
+      <td class="ev">${evidence}</td>`;
+    tb.appendChild(tr);
+  });
+}
+
+function highlightEvidence(raw, hit){
+  const re = new RegExp(hit.replace(/[.*+?^${}()|[\]\\]/g,"\\$&"),"i");
+  const m = raw.match(re);
+  if(!m) return `命中：<mark>${hit}</mark>`;
+  const i = raw.indexOf(m[0]);
+  const start = Math.max(0, i-10), end = Math.min(raw.length, i+m[0].length+10);
+  let seg = raw.slice(start,end);
+  seg = seg.replace(re, `<mark>${m[0]}</mark>`);
+  return (start>0?"…":"")+seg+(end<raw.length?"…":"");
+}
+
+function override(i, v){
+  LAST.results[i].score = parseInt(v,10);
+  LAST.results[i].manual = true;
+  const chip = document.getElementById("chip-"+i);
+  chip.textContent = v; chip.className = "sc sc"+v;
+  renderTotals(LAST.results);
+  renderQuestions(LAST.results);
+  renderSummary();
+}
+
+/* ---------- 總分 / 嚴重度 / CEAP ---------- */
+function renderTotals(results){
+  const total = results.reduce((a,r)=>a+r.score,0);
+  document.getElementById("vcssTotal").textContent = total;
+  let sev, col;
+  if(total<=5){sev="輕微";}
+  else if(total<=10){sev="輕–中度";}
+  else if(total<=20){sev="中–重度";}
+  else{sev="嚴重";}
+  document.getElementById("vcssSeverity").textContent = sev;
+
+  const ceap = deriveCEAP(results);
+  document.getElementById("ceapBadge").textContent = ceap.c;
+  document.getElementById("ceapDesc").textContent = ceap.desc;
+}
+
+/* 由 VCSS 各項回推 CEAP 臨床 C 分級（取最高階） */
+function deriveCEAP(results){
+  const by = {};
+  results.forEach(r=> by[r.dom.key]=r.score);
+  const hasUlcerActive = by.ulcerN>0 || by.ulcerT>0 || by.ulcerS>0;
+  const healedUlcer = /好了|癒合|之前.*傷口|以前破|痊癒|結疤|已經好/.test(LAST?.raw||"");
+  const c4b = by.indur>0;                 // 硬化 → 脂性皮膚硬化
+  const c4a = by.pigment>0 || by.inflam>0;// 色素／濕疹
+  const c3  = by.edema>0;
+  const c2  = by.veins>=1 && !/蜘蛛|微血管|網狀/.test(LAST?.raw||"");
+  const c1  = /蜘蛛|微血管|網狀|細.*血管/.test(LAST?.raw||"");
+
+  if(hasUlcerActive) return {c:"C6", desc:"活動性靜脈性潰瘍"};
+  if(healedUlcer && !hasUlcerActive) return {c:"C5", desc:"已癒合之靜脈性潰瘍"};
+  if(c4b) return {c:"C4b", desc:"脂性皮膚硬化／白色萎縮"};
+  if(c4a) return {c:"C4a", desc:"色素沉著／鬱血性濕疹"};
+  if(c3)  return {c:"C3", desc:"靜脈性水腫"};
+  if(c2)  return {c:"C2", desc:"靜脈曲張（管徑 ≥3mm）"};
+  if(c1)  return {c:"C1", desc:"微血管擴張／網狀靜脈"};
+  return {c:"C0", desc:"無可見或可觸及之靜脈疾病徵象"};
+}
+
+/* ---------- VDS 靜脈失能評分（功能面 0–3） ---------- */
+const VDS_RULES = [
+  {s:3, kw:["躺著","臥床","下不了床","完全無法","走不動","無法工作","不能工作","無法站","抬腳也沒用","抬腳還是"]},
+  {s:2, kw:["要穿彈性襪才能","靠彈性襪","要抬腳","抬高才","需要休息才","撐不了","要坐下來休息","影響工作","影響上班","做不了家事"]},
+  {s:1, kw:["會痠","會脹","會痛","痠脹","不舒服","站久","痠痛","沉重"]},
+];
+function initVDS(results, text){
+  let best = {s:0, hit:null};
+  for(const rule of VDS_RULES){
+    for(const kw of rule.kw){
+      const idx = text.indexOf(kw);
+      if(idx>=0 && !isNegated(text, idx)){ best = {s:rule.s, hit:kw}; break; }
+    }
+    if(best.s) break;
+  }
+  LAST.vds = {score:best.s, hit:best.hit, manual:false};
+  document.getElementById("vdsSelect").value = best.s;
+  paintVDS();
+}
+function setVDS(v){ LAST.vds.score=parseInt(v,10); LAST.vds.manual=true; paintVDS(); renderSummary(); }
+function paintVDS(){
+  const vds = LAST.vds;
+  const chip = document.getElementById("vdsChip");
+  chip.textContent = vds.score; chip.className = "sc sc"+vds.score;
+  document.getElementById("vdsEvidence").innerHTML = vds.hit
+    ? `依主訴推定，命中：${highlightEvidence(LAST.raw, vds.hit)}`
+    : `<span style="color:#b9c6bf">主訴未明確描述功能影響，預設 0；請依實際確認</span>`;
+}
+
+/* ---------- Villalta（血栓後症候群 PTS） ---------- */
+/* 11 項：5 症狀 + 6 徵象，各 0–3。能對應 VCSS 的先預填，其餘手動 */
+const VILLALTA = [
+  {key:"v_pain",   name:"疼痛（小腿）",      type:"症狀", from:"pain"},
+  {key:"v_cramp",  name:"痙攣／抽筋",        type:"症狀", kw:["抽筋","痙攣","抽起來","小腿緊縮"]},
+  {key:"v_heavy",  name:"沉重感",            type:"症狀", kw:["沉重","很重","腳很重","像灌鉛","很沉"]},
+  {key:"v_par",    name:"感覺異常（麻／刺）", type:"症狀", kw:["螞蟻爬","刺刺","麻麻","發麻","刺痛","感覺怪"]},
+  {key:"v_itch",   name:"搔癢",              type:"症狀", kw:["癢","抓"]},
+  {key:"v_edema",  name:"脛前水腫",          type:"徵象", from:"edema"},
+  {key:"v_indur",  name:"皮膚硬化",          type:"徵象", from:"indur"},
+  {key:"v_pig",    name:"色素沉著",          type:"徵象", from:"pigment"},
+  {key:"v_red",    name:"發紅",              type:"徵象", kw:["紅","泛紅","潮紅","紅腫"]},
+  {key:"v_ect",    name:"靜脈擴張",          type:"徵象", from:"veins"},
+  {key:"v_tender", name:"小腿壓痛（理學檢查）", type:"徵象", kw:["壓痛","一壓就痛","一壓小腿","壓小腿","按了會痛","壓下去痛","按下去痛"]},
+];
+function initVillalta(results, text){
+  const by = {};
+  results.forEach(r=> by[r.dom.key]=r.score);
+  const items = VILLALTA.map(v=>{
+    let score=0, src="";
+    if(v.from!==undefined){                       // 由 VCSS 對應項預填（0–3 直接沿用）
+      score = Math.min(3, by[v.from]||0);
+      if(score>0) src = "沿用 VCSS「"+DOMAINS.find(d=>d.key===v.from).name.replace(/｜.*/,'')+"」";
+    } else {                                        // 由關鍵字偵測
+      for(const kw of v.kw){
+        const idx=text.indexOf(kw);
+        if(idx>=0 && !isNegated(text,idx)){ score=1; src="主訴：「"+kw+"」"; break; }
+      }
+    }
+    return {def:v, score, src, manual:false};
+  });
+  LAST.villalta = {items, active:document.getElementById("dvtToggle").checked};
+  renderVillalta();
+}
+function toggleVillalta(){
+  const on = document.getElementById("dvtToggle").checked;
+  document.getElementById("villaltaBody").classList.toggle("hide", !on);
+  if(LAST&&LAST.villalta) LAST.villalta.active = on;
+  renderSummary();
+}
+function renderVillalta(){
+  if(!LAST||!LAST.villalta) return;
+  const tb = document.querySelector("#villaltaTable tbody");
+  tb.innerHTML="";
+  LAST.villalta.items.forEach((it,i)=>{
+    const opts=[0,1,2,3].map(v=>`<option value="${v}" ${v===it.score?"selected":""}>${v}</option>`).join("");
+    const tr=document.createElement("tr");
+    if(it.score>0 && !it.manual) tr.className="auto";
+    tr.innerHTML=`
+      <td class="dom"><span style="color:#93a29a;font-size:11px">${it.def.type}</span> ${it.def.name}</td>
+      <td><span class="sc sc${it.score}" id="vil-${i}">${it.score}</span>
+        <select onchange="setVillalta(${i},this.value)" style="margin-left:8px">${opts}</select></td>
+      <td class="ev">${it.src||'<span style="color:#c8d2cc">—</span>'}</td>`;
+    tb.appendChild(tr);
+  });
+  paintVillaltaTotal();
+}
+function setVillalta(i,v){
+  const it=LAST.villalta.items[i];
+  it.score=parseInt(v,10); it.manual=true;
+  const chip=document.getElementById("vil-"+i);
+  chip.textContent=v; chip.className="sc sc"+v;
+  paintVillaltaTotal(); renderSummary();
+}
+function villaltaScore(){
+  const items=LAST.villalta.items;
+  const total=items.reduce((a,x)=>a+x.score,0);
+  const hasUlcer=LAST.results.find(r=>r.dom.key==="ulcerN").score>0;
+  let grade;
+  if(hasUlcer||total>=15) grade="重度 PTS";
+  else if(total>=10) grade="中度 PTS";
+  else if(total>=5) grade="輕度 PTS";
+  else grade="無 PTS";
+  return {total, grade, hasUlcer};
+}
+function paintVillaltaTotal(){
+  const {total,grade}=villaltaScore();
+  document.getElementById("villaltaTotal").textContent=total;
+  document.getElementById("villaltaGrade").textContent=grade;
+}
+
+/* ---------- CIVIQ-20 生活品質（意譯參考版；官方版見 civiq-20.com） ---------- */
+const CIVIQ_DIMS = [["疼痛",0,4],["體能",4,8],["心理",8,17],["社交",17,20]];
+const CIVIQ_ITEMS = [
+  "腳踝或小腿疼痛的程度？",
+  "腿部問題妨礙你工作或日常事務的程度？",
+  "會因為腿部問題而睡不好嗎？",
+  "早上起床時腿部痠痛、僵硬的程度？",
+  "爬樓梯會受影響嗎？",
+  "蹲下或跪下會受影響嗎？",
+  "快步走會受影響嗎？",
+  "做家事、提重物會受影響嗎？",
+  "會覺得緊張或焦躁嗎？",
+  "覺得自己拖累家人或別人嗎？",
+  "不好意思讓別人看到你的腿（裙子、短褲、泳裝）嗎？",
+  "變得容易發脾氣嗎？",
+  "覺得自己像行動不便的人嗎？",
+  "早上提不起勁嗎？",
+  "變得不想出門嗎？",
+  "做什麼都得顧慮腿（怕站太久、怕碰撞）嗎？",
+  "覺得腿容易疲勞、沉重嗎？",
+  "參加聚會、喜宴等社交活動會受影響嗎？",
+  "運動或較費力的活動會受限嗎？",
+  "長時間坐車、搭機等旅行會受困擾嗎？",
+];
+function civiqDimOf(i){ for(const [n,s,e] of CIVIQ_DIMS){ if(i>=s&&i<e) return n; } return ""; }
+function buildCiviq(){
+  const tb=document.querySelector("#civiqTable tbody");
+  tb.innerHTML = CIVIQ_ITEMS.map((q,i)=>{
+    const opts=[1,2,3,4,5].map(v=>`<option value="${v}">${v}</option>`).join("");
+    return `<tr><td style="color:#93a29a;font-size:12px">${civiqDimOf(i)}</td>
+      <td>${i+1}. ${q}</td>
+      <td><select onchange="setCiviq(${i},this.value)" data-ci="${i}">${opts}</select></td></tr>`;
+  }).join("");
+}
+function resetCiviq(){
+  LAST.civiq = {vals:Array(20).fill(1), touched:false};
+  document.querySelectorAll('#civiqTable select').forEach(s=> s.value="1");
+  document.getElementById("civiqBody").classList.add("hide");
+  document.getElementById("civiqBtn").textContent="展開 20 題填寫 ▾";
+  paintCiviq();
+}
+function setCiviq(i,v){
+  if(!LAST||!LAST.civiq) return;
+  LAST.civiq.vals[i]=parseInt(v,10);
+  LAST.civiq.touched=true;
+  paintCiviq(); renderSummary();
+}
+function civiqScore(){
+  const v=LAST.civiq.vals;
+  const sum=v.reduce((a,b)=>a+b,0);
+  const gis=Math.round((sum-20)/80*100);                    // Global Index 0–100
+  const dims=CIVIQ_DIMS.map(([n,s,e])=>{
+    const sub=v.slice(s,e), su=sub.reduce((a,b)=>a+b,0), nn=sub.length;
+    return [n, Math.round((su-nn)/(4*nn)*100)];
+  });
+  return {gis,dims,sum};
+}
+function paintCiviq(){
+  const {gis,dims}=civiqScore();
+  document.getElementById("civiqGIS").textContent=gis;
+  document.getElementById("civiqDims").textContent=dims.map(d=>d[0]+" "+d[1]).join("　·　");
+}
+function toggleCiviqBody(){
+  const hidden=document.getElementById("civiqBody").classList.toggle("hide");
+  document.getElementById("civiqBtn").textContent = hidden?"展開 20 題填寫 ▾":"收合 20 題 ▴";
+}
+
+/* ---------- 語音輸入（Web Speech API，zh-TW） ---------- */
+let rec=null, recOn=false;
+function toggleVoice(){
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const msg = document.getElementById("voiceInterim");
+  if(!SR){
+    msg.textContent="此瀏覽器不支援網頁語音辨識；請點進輸入框改用 macOS 內建聽寫（連按兩下 🎤／fn 鍵），講完一樣按「自動評分」。";
+    return;
+  }
+  if(recOn){ stopVoice(true); return; }
+  rec = new SR();
+  rec.lang="zh-TW"; rec.continuous=true; rec.interimResults=true;
+  rec.onresult = (e)=>{
+    let interim="";
+    for(let i=e.resultIndex;i<e.results.length;i++){
+      const t=e.results[i][0].transcript.trim();
+      if(e.results[i].isFinal) appendVoice(t);
+      else interim+=t;
+    }
+    msg.textContent = interim ? "…"+interim : "🎙 聆聽中（講完按「⏹ 停止並評分」）";
+  };
+  rec.onerror = (e)=>{
+    if(e.error==="no-speech") return;              // 靜音逾時，onend 會自動續聽
+    recOn=false; paintMic();
+    msg.textContent = (e.error==="not-allowed"||e.error==="service-not-allowed")
+      ? "麥克風權限被拒。請改以 http://localhost 或 https 開啟本頁，或點進輸入框用 macOS 內建聽寫（連按兩下 🎤／fn）。"
+      : "語音辨識中斷（"+e.error+"）。可點進輸入框改用 macOS 內建聽寫（連按兩下 🎤／fn）。";
+  };
+  rec.onend = ()=>{ if(recOn){ try{ rec.start(); }catch(_){} } };  // Chrome 靜音會自動 stop，續聽
+  try{
+    rec.start(); recOn=true; paintMic();
+    msg.textContent="🎙 聆聽中（講完按「⏹ 停止並評分」）";
+  }catch(err){ msg.textContent="無法啟動語音辨識："+err.message; }
+}
+function appendVoice(t){
+  const ta=document.getElementById("input");
+  ta.value = ta.value ? ta.value.replace(/[\s，]*$/,"")+"，"+t : t;
+}
+function stopVoice(autoRun){
+  recOn=false;
+  try{ rec && rec.stop(); }catch(_){}
+  paintMic();
+  document.getElementById("voiceInterim").textContent="";
+  if(autoRun && document.getElementById("input").value.trim()) run();
+}
+function paintMic(){
+  const b=document.getElementById("micBtn");
+  b.classList.toggle("rec", recOn);
+  b.textContent = recOn ? "⏹ 停止並評分" : "🎤 語音輸入";
+}
+
+/* ---------- 補問清單 ---------- */
+function renderQuestions(results){
+  const box = document.getElementById("qList");
+  box.innerHTML = "";
+  const asked = [];
+  results.forEach(r=>{
+    // 自動偵測到 0 分（可能真的沒有，也可能沒講）→ 補問；潰瘍三項只在有跡象時追問
+    const ulcerGroup = r.dom.ulcer;
+    const anyUlcer = results.find(x=>x.dom.key==="ulcerN").score>0
+                  || /傷口|潰瘍|破洞|流湯|潰爛/.test(LAST.raw);
+    if(ulcerGroup && !anyUlcer) return;          // 完全沒潰瘍跡象就不追問潰瘍細節
+    if(r.score===0 && !r.manual){
+      r.dom.qs.forEach(q=> asked.push({dom:r.dom.name, q}));
+    } else if(ulcerGroup && r.score===0){
+      r.dom.qs.forEach(q=> asked.push({dom:r.dom.name, q}));
+    }
+  });
+  if(asked.length===0){
+    box.innerHTML = `<div class="empty">✓ 主訴涵蓋了十項評分所需資訊，沒有明顯缺口。仍建議理學檢查＋都卜勒超音波確認 CEAP 的解剖與病理分級。</div>`;
+    return;
+  }
+  asked.forEach((a,i)=>{
+    const div = document.createElement("div");
+    div.className="q";
+    div.innerHTML = `<span class="qi">${i+1}</span><span class="qt"><span style="color:#a98a4a">〔${a.dom}〕</span> ${a.q}</span>`;
+    box.appendChild(div);
+  });
+}
+
+/* ---------- 摘要 ---------- */
+function renderSummary(){
+  const r = LAST.results;
+  const total = r.reduce((a,x)=>a+x.score,0);
+  const ceap = deriveCEAP(r);
+  const lines = r.map(x=>`  ${x.dom.name.padEnd(0)} : ${x.score}`).join("\n");
+  const detail = r.filter(x=>x.score>0)
+    .map(x=>`${x.dom.name}${x.score}`).join("、") || "各項均為 0";
+  const missing = [];
+  r.forEach(x=>{ if(x.score===0 && !x.manual && !x.dom.ulcer) missing.push(x.dom.name); });
+
+  const vds = LAST.vds ? LAST.vds.score : 0;
+  const vdsLabel = ["無症狀","有症狀但不需壓力治療","需彈性襪／抬腳維持活動","即使彈性襪＋抬腳仍受限"][vds];
+
+  let ptsLine = "";
+  if(LAST.villalta && LAST.villalta.active){
+    const v = villaltaScore();
+    ptsLine = `\n\n【Villalta 血栓後症候群（有 DVT 病史）】\nVillalta 總分：${v.total} / 33 → ${v.grade}${v.hasUlcer?"（合併靜脈潰瘍）":""}`;
+  }
+
+  let civLine = "";
+  if(LAST.civiq && LAST.civiq.touched){
+    const c = civiqScore();
+    civLine = `\n\n【CIVIQ-20 生活品質（意譯參考版）】\n總指數 GIS：${c.gis} / 100（越高影響越大）；${c.dims.map(d=>d[0]+" "+d[1]).join("・")}`;
+  }
+
+  const txt =
+`【VCSS 靜脈臨床嚴重度評分】
+VCSS 總分：${total} / 30（${sevText(total)}）
+逐項：
+${lines}
+
+陽性項目：${detail}
+CEAP 臨床分級（依主訴推定）：${ceap.c}　${ceap.desc}
+　＊E/A/P 分級需都卜勒超音波確認
+
+【VDS 靜脈失能評分】${vds} — ${vdsLabel}${civLine}${ptsLine}
+
+待補問／未涵蓋項目：${missing.length?missing.join("、"):"無明顯缺口"}
+
+（本評分由主訴自動解析初判，經醫師臨床判斷校正）`;
+  document.getElementById("summary").textContent = txt;
+}
+function sevText(t){ return t<=5?"輕微":t<=10?"輕–中度":t<=20?"中–重度":"嚴重"; }
+
+function renderRubric(){
+  const el = document.getElementById("rubric");
+  el.innerHTML = DOMAINS.map(d=>
+    `<div style="margin:4px 0"><b style="color:#2f5f46">${d.name}</b>：${d.rubric.join(" ／ ")}</div>`
+  ).join("");
+}
+
+/* ---------- 工具 ---------- */
+function copySum(){
+  const t = document.getElementById("summary").textContent;
+  navigator.clipboard.writeText(t).then(()=>{
+    const m=document.getElementById("copyMsg");
+    m.textContent="✓ 已複製到剪貼簿"; m.style.color="#3f7d5c";
+    setTimeout(()=>m.textContent="",2500);
+  });
+}
+function clearAll(){
+  document.getElementById("input").value="";
+  if(recOn) stopVoice(false);
+  ["resultCard","vdsCard","villaltaCard","civiqCard","qCard","sumCard"]
+    .forEach(id=>document.getElementById(id).classList.add("hide"));
+}
+function loadExamples(){
+  const box=document.getElementById("examples");
+  EXAMPLES.forEach(e=>{
+    const s=document.createElement("span");
+    s.textContent="▸ "+e.t;
+    s.onclick=()=>{document.getElementById("input").value=e.v;};
+    box.appendChild(s);
+  });
+}
+loadExamples();
+buildCiviq();
+
+/* ---------- 完整問診總表（沒有主訴時照著問） ---------- */
+const INTAKE = [
+  {g:"① 主觀症狀（VCSS 疼痛／VDS／Villalta）", q:[
+    ["腳會不會痛或痠脹不適？","VCSS 疼痛"],
+    ["是偶爾、還是幾乎每天？","VCSS 疼痛分級"],
+    ["痛到需要吃止痛藥嗎？多久一次？","VCSS 疼痛 2–3 分界"],
+    ["會不會覺得腳沉重、像灌鉛？","Villalta 沉重"],
+    ["晚上或半夜會不會抽筋？","Villalta 痙攣"],
+    ["有沒有麻、刺、螞蟻爬的感覺？","Villalta 感覺異常"],
+    ["皮膚會不會癢？","Villalta 搔癢／VCSS 發炎"],
+  ]},
+  {g:"② 誘發與緩解", q:[
+    ["久站、久坐後會不會更嚴重？","誘因"],
+    ["抬高腳、休息後會不會改善？","緩解因子"],
+    ["症狀一天當中什麼時候最明顯？（早上／下午／晚上）","時間型態"],
+    ["女性：懷孕、月經前後或口服避孕藥期間有沒有加重？","荷爾蒙相關"],
+  ]},
+  {g:"③ 功能影響（VDS）", q:[
+    ["這些不適會不會影響你的工作或日常活動？","VDS 1 分以上"],
+    ["需要靠穿彈性襪、或把腳抬高，才撐得過一天嗎？","VDS 2"],
+    ["就算穿了彈性襪、抬了腳，還是沒辦法正常活動嗎？","VDS 3"],
+  ]},
+  {g:"④ 外觀（CEAP／VCSS 靜脈曲張）", q:[
+    ["腿上有沒有浮出來的青筋、蚯蚓狀血管？","VCSS 靜脈曲張／C2"],
+    ["是凸起的粗血管，還是細細的蜘蛛絲、微血管？","C1 vs C2"],
+    ["分布在小腿、大腿、還是兩邊都有？","VCSS 靜脈曲張分級"],
+    ["單腳還是雙腳？哪一側比較嚴重？","側別"],
+  ]},
+  {g:"⑤ 皮膚變化（CEAP C3–C4／Villalta 徵象）", q:[
+    ["腳踝或小腿會不會腫？腫到多高？下午較明顯嗎？","VCSS 水腫／C3"],
+    ["皮膚有沒有變咖啡色、變黑？範圍多大？","VCSS 色素／C4a"],
+    ["皮膚會不會紅、脫皮、濕疹？","VCSS 發炎／C4a"],
+    ["踝上方皮膚摸起來會不會變硬、繃緊？","VCSS 硬化／C4b"],
+  ]},
+  {g:"⑥ 潰瘍（CEAP C5–C6）", q:[
+    ["現在或以前，腳上有沒有破過、長過傷口潰瘍？","C5/C6 判別"],
+    ["目前有幾個沒癒合的傷口？","VCSS 潰瘍數目"],
+    ["這個傷口多久了？（<3 月／3–12 月／>1 年）","VCSS 潰瘍時間"],
+    ["最大的傷口大約幾公分？位置在哪？","VCSS 潰瘍大小"],
+    ["以前破的傷口後來癒合了嗎？","C5 已癒合"],
+  ]},
+  {g:"⑦ 危險因子與病史（含 Villalta 觸發）", q:[
+    ["過去有沒有得過深部靜脈血栓（DVT）／肺栓塞？","★ 觸發 Villalta PTS 評估"],
+    ["家族有沒有人有靜脈曲張？","家族史"],
+    ["女性：懷孕過幾次？","危險因子"],
+    ["工作需要長時間站或坐嗎？","危險因子"],
+    ["有沒有腿部外傷、骨折或手術史？","次發性病因"],
+    ["體重、有無糖尿病或其他慢性病？","癒合／鑑別"],
+    ["目前有在吃抗凝血或任何藥物嗎？","用藥史"],
+  ]},
+  {g:"⑧ 過去治療與順從度（VCSS 壓力治療）", q:[
+    ["以前有沒有做過靜脈手術、雷射、或打過硬化劑？","治療史"],
+    ["有沒有在穿彈性襪／壓力治療？","VCSS 壓力治療"],
+    ["穿的頻率？（沒穿／偶爾／多數日子／每天完全遵從）","VCSS 壓力治療分級"],
+  ]},
+];
+function buildIntake(){
+  const el=document.getElementById("intakeBody");
+  el.innerHTML = INTAKE.map(sec=>
+    `<div class="intake-grp"><h4>${sec.g}</h4><ul>`+
+    sec.q.map(([q,tag])=>`<li>${q}<span class="tag">— ${tag}</span></li>`).join("")+
+    `</ul></div>`
+  ).join("");
+}
+buildIntake();
+function toggleIntake(){
+  const body=document.getElementById("intakeBody");
+  const hidden=body.classList.toggle("hide");
+  document.getElementById("intakeBtn").textContent = hidden?"展開問診總表 ▾":"收合問診總表 ▴";
+}
+function copyIntake(){
+  const txt = "【靜脈疾病完整問診總表 — 富足診所】\n\n"+
+    INTAKE.map(sec=> sec.g+"\n"+sec.q.map(([q])=>"  ・"+q).join("\n")).join("\n\n");
+  navigator.clipboard.writeText(txt).then(()=>{
+    const m=document.getElementById("intakeMsg");
+    m.textContent="✓ 已複製"; m.style.color="#3f7d5c";
+    setTimeout(()=>m.textContent="",2500);
+  });
+}
+</script>
