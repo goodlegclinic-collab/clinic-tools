@@ -116,7 +116,15 @@
   <!-- 1. 輸入 -->
   <div class="card">
     <h2><span class="n">1</span>貼上病人主訴（口語、台語直翻、片段都可以）</h2>
-    <div class="q5">
+    <label style="display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:14.5px;cursor:pointer;color:var(--green-d);font-weight:600">
+      <input type="checkbox" id="fuToggle" onchange="toggleFollowUp()" style="width:17px;height:17px">
+      回診病人（貼上上次紀錄 → 重新評分並自動比較）
+    </label>
+    <div id="fuBox" class="hide" style="margin-bottom:12px">
+      <div class="hint" style="margin:0 0 6px">把上次病歷裡的「主訴摘要（含 VCSS 分數）」或上次的完整摘要貼進來，本次評分後自動產生上次 → 本次比較：</div>
+      <textarea id="prevText" style="min-height:60px" oninput="prevChanged()" placeholder="例：左小腿靜脈曲張多年，久站後偶有痠脹…。（VCSS 12/30、CEAP C4b、VDS 2）"></textarea>
+    </div>
+    <div class="q5" id="q5">
       <h3>門診快速五問 — 開著語音、照這五題問完，就能算完四套分數</h3>
       <ol>
         <li>腳會<b>痠、脹、痛或沉重</b>嗎？<b>偶爾還是每天</b>？要不要<b>吃止痛藥</b>、會不會<b>影響工作</b>？<span class="t5">疼痛・VDS</span></li>
@@ -124,6 +132,18 @@
         <li>腳會<b>腫</b>嗎？腫到<b>腳踝、小腿、還是膝蓋以上</b>？<b>下午</b>比較明顯嗎？<span class="t5">水腫・C3</span></li>
         <li>皮膚有沒有<b>變黑、變硬、會癢</b>？現在或以前<b>破過傷口</b>嗎？<b>好了沒？多久？多大？</b><span class="t5">皮膚・潰瘍・C4–C6</span></li>
         <li>有沒有在<b>穿彈性襪</b>？多常穿？以前有沒有得過<b>深部靜脈血栓（DVT）</b>？<span class="t5">壓力治療・Villalta 開關</span></li>
+      </ol>
+    </div>
+    <div class="q5 hide" id="fq">
+      <h3>回診快速七問 — 對照上次紀錄，重點問「變化」</h3>
+      <ol>
+        <li>上次治療／回診之後，整體感覺是<b>改善、一樣、還是更糟</b>？</li>
+        <li><b>痠脹痛</b>還有嗎？多常？還需要<b>止痛藥</b>嗎？還會<b>影響工作</b>嗎？</li>
+        <li>還會<b>腫</b>嗎？腫到<b>哪裡</b>？下午還明顯嗎？</li>
+        <li>皮膚<b>變黑、變硬</b>的範圍有<b>變淡或縮小</b>嗎？還會癢嗎？</li>
+        <li>（原有傷口者）<b>傷口癒合了嗎</b>？縮小還是變大？有沒有<b>新傷口</b>？</li>
+        <li><b>彈性襪</b>現在多常穿？</li>
+        <li>治療部位有不舒服嗎？（<b>硬塊、麻木、色素沉著、新浮出的青筋</b>）</li>
       </ol>
     </div>
     <textarea id="input" placeholder="例：左腳小腿這幾年浮出一條一條的青筋，站久了會痠脹，下午腳踝腫起來，穿襪子會勒出一圈。皮膚踝關節附近變咖啡色，摸起來硬硬的，之前有破過一個傷口好了…"></textarea>
@@ -164,6 +184,13 @@
       <code>C5</code> 已癒合潰瘍 · <code>C6</code> 活動性潰瘍。
       CEAP 完整分級尚需 E（病因）/A（解剖）/P（病理），需靠都卜勒超音波，非主訴可得。
     </div>
+  </div>
+
+  <!-- Δ 回診比較 -->
+  <div class="card hide" id="compareCard">
+    <h2><span class="n" style="background:var(--blue)">Δ</span>回診比較（上次 → 本次）</h2>
+    <div id="compareBody"></div>
+    <div class="legend">上次分數解析自「回診病人」貼上的紀錄；▼＝分數下降（改善）、▲＝上升（惡化）。CEAP 由 C6（活動性潰瘍）轉 C5（已癒合）視為改善方向。</div>
   </div>
 
   <!-- 3. VDS 靜脈失能評分 -->
@@ -285,8 +312,8 @@ const DOMAINS = [
     rubric:["0 無","1 偶爾、不影響活動、不需止痛藥","2 每日、中度影響活動、偶爾止痛藥","3 每日、明顯限制活動、規律止痛藥"],
     rules:[
       {s:3, kw:["天天痛","每天痛","痛到不能","痛到睡不著","一直吃止痛","規律止痛","規律吃止痛","天天吃止痛","無法走","站不住","痛得受不了","痛到受不了","嚴重痠痛","痛到影響"]},
-      {s:2, kw:["每天","每日","天天","下午就","傍晚就","影響工作","影響活動","影響上班","要吃止痛","需要止痛","吃止痛藥","止痛藥才"]},
-      {s:1, kw:["站久","走久","久站","久坐","痠脹","脹痛","痠痛","痠麻","沉重","腳很重","悶痛","抽筋","痠一下","微痠","有點不舒服","會痠","會脹","痠","脹"]},
+      {s:2, kw:["每天都痠","每天都脹","每天都會痛","每天都痛","天天都會痛","每天痠","每天脹","天天痠","天天脹","每天都不舒服","影響工作","影響活動","影響上班","要吃止痛","需要止痛","吃止痛藥","止痛藥才"]},
+      {s:1, kw:["站久","走久","久站","久坐","痠脹","脹痛","痠痛","痠麻","沉重","腳很重","悶痛","抽筋","痠一下","微痠","有點不舒服","還會痠","還是痠","有點痠","還會痛","還有點痛","走路會痛","很痛","特別痠","特別痛","會痠","會脹","會痛","痠","脹","痛"]},
     ],
     qs:["疼痛是<b>每天</b>還是<b>偶爾</b>？","痛到需要<b>吃止痛藥</b>嗎？頻率？","會<b>影響日常活動／工作</b>嗎？"]
   },
@@ -295,8 +322,8 @@ const DOMAINS = [
     rubric:["0 無","1 少數、散在","2 侷限於小腿或大腿","3 小腿＋大腿都有"],
     rules:[
       {s:3, kw:["整條腿都是","大腿到小腿","小腿和大腿","小腿跟大腿","大腿也有","大腿小腿都","蔓延","滿腿","很多條","一堆青筋","一大片青筋","一大片血管"]},
-      {s:2, kw:["一條一條","一條條","浮出","浮起","蚯蚓","凸起","凸出","彎曲的血管","靜脈曲張","青筋凸","青筋浮","血管突出","血管凸","團塊","一整條青筋","蟠曲"]},
-      {s:1, kw:["幾條","一兩條","一兩條青筋","少數","散在","一小段","一點點血管","蜘蛛網","蜘蛛絲","微血管","網狀","細血管","細細的血管"]},
+      {s:2, kw:["一條一條","一條條","浮出","浮起","蚯蚓","凸起","凸出","彎曲的血管","靜脈曲張","青筋凸","青筋浮","血管突出","血管凸","團塊","一整條青筋","蟠曲","有青筋","青筋"]},
+      {s:1, kw:["蜘蛛絲","蜘蛛網","微血管","網狀","細細的血管","細血管","一點點血管","幾條","一兩條","一兩條青筋","少數","散在","一小段"]},
     ],
     qs:["曲張血管是在<b>小腿、大腿、還是兩處都有</b>？","是<b>凸出的靜脈曲張</b>還是細的蜘蛛絲／微血管？"]
   },
@@ -305,8 +332,8 @@ const DOMAINS = [
     rubric:["0 無","1 侷限足與踝","2 踝以上、膝以下","3 到膝或膝以上"],
     rules:[
       {s:3, kw:["整條腿腫","腫到膝","膝蓋腫","小腿都腫","腫到大腿"]},
-      {s:2, kw:["小腿腫","腳腫","腫到小腿","脛前腫","按下去凹","水腫"]},
-      {s:1, kw:["腳踝腫","踝腫","腳背腫","下午腫","下午會腫","傍晚腫","傍晚會腫","站久會腫","會腫","襪子勒","勒出一圈","勒痕","消腫","晚上會腫"]},
+      {s:2, kw:["小腿腫","腳腫","腫到小腿","脛前腫","按下去凹","水腫","膝蓋以下都腫","膝下都腫"]},
+      {s:1, kw:["腳踝腫","踝腫","腳背腫","下午腫","下午會腫","傍晚腫","傍晚會腫","站久會腫","會腫","有點腫","還是腫","還會腫","還有腫","特別腫","腫脹","浮腫","襪子勒","勒出一圈","勒痕","晚上會腫"]},
     ],
     qs:["水腫<b>最高到哪裡</b>（腳踝／小腿／膝蓋以上）？","是<b>下午／久站後才腫、早上消退</b>嗎？"]
   },
@@ -316,7 +343,7 @@ const DOMAINS = [
     rules:[
       {s:3, kw:["整個小腿變","整個小腿黑","整個小腿又黑","小腿大片變色","色素很廣","大範圍變黑","小腿都變咖啡","滿小腿黑"]},
       {s:2, kw:["小腿變黑","小腿變咖啡","小腿發黑","一片變色","一大片變色","瀰漫","小腿下段變","小腿下段黑"]},
-      {s:1, kw:["咖啡色","變咖啡","變黑","又黑","變深","色素沉","色素","發黑","暗沉","著色","變色","一圈黑","黑一圈"]},
+      {s:1, kw:["咖啡色","變咖啡","變黑","又黑","變深","色素沉","色素","發黑","暗沉","著色","變色","一圈黑","黑一圈","有點黑","還是黑","還有點黑","有點暗"]},
     ],
     qs:["皮膚變色<b>範圍多大</b>（只在踝周／小腿下段／更高）？"]
   },
@@ -326,7 +353,7 @@ const DOMAINS = [
     rules:[
       {s:3, kw:["整片紅腫","大範圍濕疹","小腿都紅"]},
       {s:2, kw:["一片紅","瀰漫紅","小腿濕疹","滲液"]},
-      {s:1, kw:["癢","濕疹","紅疹","脫皮","泛紅","潮紅","皮膚癢","發炎","起疹","紅腫","會抓"]},
+      {s:1, kw:["癢","濕疹","紅疹","脫皮","泛紅","潮紅","皮膚癢","發炎","起疹","紅腫","會抓","還會癢","還是癢","特別癢"]},
     ],
     qs:["皮膚會<b>癢／紅／脫皮（鬱血性濕疹）</b>嗎？範圍多大？"]
   },
@@ -336,7 +363,7 @@ const DOMAINS = [
     rules:[
       {s:3, kw:["整段硬","大範圍硬","小腿都硬","整個小腿硬","整個小腿又黑又硬"]},
       {s:2, kw:["一片硬","小腿變硬","小腿又硬","瀰漫硬化","小腿下段硬"]},
-      {s:1, kw:["硬硬的","變硬","又硬","硬塊","繃緊","皮膚緊","脂性硬化","摸起來硬","硬邦邦","硬梆梆","僵硬","結痂硬"]},
+      {s:1, kw:["硬硬的","變硬","又硬","硬塊","繃緊","皮膚緊","脂性硬化","摸起來硬","硬邦邦","硬梆梆","僵硬","結痂硬","有點硬","還是硬"]},
     ],
     qs:["踝上方皮膚摸起來<b>會硬、繃緊（脂性皮膚硬化）</b>嗎？"]
   },
@@ -346,7 +373,7 @@ const DOMAINS = [
     rules:[
       {s:3, kw:["三個傷口","好幾個潰瘍","多處潰瘍","多個傷口"]},
       {s:2, kw:["兩個傷口","兩處潰瘍","2個傷口"]},
-      {s:1, kw:["有傷口","潰瘍","破皮沒好","爛一個洞","傷口沒好","開放性傷口","流湯","化膿的傷口","一個傷口","潰爛"]},
+      {s:1, kw:["有傷口","潰瘍","破皮沒好","爛一個洞","傷口沒好","傷口還沒好","開放性傷口","流湯","化膿的傷口","一個傷口","潰爛","又破","破了一個","破一個","破了個洞","破洞"]},
     ],
     qs:["目前有<b>幾個沒癒合的傷口／潰瘍</b>？"],
     ulcer:true
@@ -387,7 +414,7 @@ const DOMAINS = [
 
 /* ---------- 否定詞：命中則該項降回 0（避免「不會痛」被判成痛） ----------
    只看關鍵字「前 3 字」的小視窗，避免「不腫但會痛」這種對比句誤傷後半症狀 */
-const NEG = ["不","沒","未","無","否認","別"];
+const NEG = ["不","沒","未","無","否認"];   // 「別」會誤殺「特別痠」，不收
 /* ---------- 已癒合線索：潰瘍命中後若鄰近出現，判為 C5 而非活動性 C6 ---------- */
 const HEALED = ["好了","癒合","痊癒","結疤","收口","好起來","已經好","早就好"];
 const NOT_HEALED = ["沒好","沒有好","還沒好","一直沒好","都沒好"];
@@ -406,8 +433,10 @@ function run(){
   const raw = document.getElementById("input").value.trim();
   if(!raw){ alert("請先貼上病人的主訴內容"); return; }
   const text = normalize(raw);
+  FOLLOWUP.prev = FOLLOWUP.on ? parsePrev(document.getElementById("prevText").value) : null;
   const results = DOMAINS.map(d => scoreDomain(d, text));
   gateUlcer(results, text);
+  fixComp(results, text);
   LAST = {raw, results, vds:null, villalta:null};
   // 每次評分視為新病人：重置 DVT 開關，Villalta 需重新勾選
   document.getElementById("dvtToggle").checked = false;
@@ -416,6 +445,12 @@ function run(){
   renderTotals(results);
   initVDS(results, text);
   initVillalta(results, text);
+  // 回診且上次紀錄有 Villalta 分數 → 此病人有 DVT 病史，自動勾選
+  if(FOLLOWUP.on && FOLLOWUP.prev && FOLLOWUP.prev.villalta!=null){
+    document.getElementById("dvtToggle").checked = true;
+    LAST.villalta.active = true;
+    document.getElementById("villaltaBody").classList.remove("hide");
+  }
   resetCiviq();
   LAST.cc = genCC(); LAST.ccManual = false;
   renderQuestions(results);
@@ -424,6 +459,8 @@ function run(){
   renderRubric();
   ["resultCard","vdsCard","villaltaCard","civiqCard","qCard","sumCard"]
     .forEach(id=>document.getElementById(id).classList.remove("hide"));
+  if(FOLLOWUP.on && FOLLOWUP.prev){ renderCompare(); document.getElementById("compareCard").classList.remove("hide"); }
+  else document.getElementById("compareCard").classList.add("hide");
   document.getElementById("resultCard").scrollIntoView({behavior:"smooth",block:"start"});
 }
 
@@ -444,6 +481,8 @@ function scoreDomain(d, text){
         from = idx + low.length;
         if(isNegated(text, idx)) continue;                     // 「沒/不…」→ 這次不算
         if(d.ulcer && isHealed(text, idx, low.length)) continue; // 潰瘍但已癒合 → 不算活動性
+        // 硬化劑/雷射後的硬塊、色素屬治療部位反應，不算慢性皮膚變化
+        if((d.key==="pigment"||d.key==="indur") && isTreatmentSite(text, idx)) continue;
         return {dom:d, score:rule.s, hit:kw, auto:true};
       }
     }
@@ -457,21 +496,43 @@ function gateUlcer(results, text){
   const byKey = {};
   results.forEach(r=> byKey[r.dom.key]=r);
   // 以「數目」項為準（已處理否定與已癒合）：沒有活動性潰瘍就不該有持續時間／大小分數
-  const hasUlcer = byKey.ulcerN.score>0;
+  let hasUlcer = byKey.ulcerN.score>0;
+  // 救援：數目沒中，但時間/大小有中、原文有潰瘍字眼且明說「沒好」→ 視為至少一處活動性潰瘍
+  if(!hasUlcer && (byKey.ulcerT.score>0 || byKey.ulcerS.score>0)
+     && /傷口|潰瘍|破|洞|流湯|化膿|潰爛/.test(text)
+     && NOT_HEALED.some(n=> text.includes(n))){
+    byKey.ulcerN.score=1; byKey.ulcerN.hit=byKey.ulcerT.hit||byKey.ulcerS.hit; byKey.ulcerN.auto=true;
+    hasUlcer=true;
+  }
   if(!hasUlcer){
     ["ulcerT","ulcerS"].forEach(k=>{ byKey[k].score=0; byKey[k].hit=null; byKey[k].auto=false; });
   }
 }
 
-/* 只看關鍵字前 3 字的小視窗（含跨界的「沒有X」），命中否定詞即視為否定 */
+/* 關鍵字前 ~16 字有治療詞（硬化劑/雷射/注射…）→ 視為治療部位反應 */
+function isTreatmentSite(text, idx){
+  const before = text.slice(Math.max(0,idx-16), idx);
+  return /硬化劑|雷射|注射|打完|打針|術後|手術後|治療的地方|打的地方/.test(before);
+}
+
+/* 壓力治療的「後置否定」：「醫生叫我穿彈性襪，但我都沒穿」→ 歸零 */
+function fixComp(results, text){
+  const comp = results.find(r=>r.dom.key==="comp");
+  if(comp.score>0 && /(但|可是|不過|其實)[^。]{0,6}沒(有)?(在)?穿|都沒穿|沒在穿|從來沒穿|買了沒穿|買了都沒/.test(text)){
+    comp.score=0; comp.hit=null; comp.auto=false;
+  }
+}
+
+/* 只看關鍵字「前」3 字的小視窗（不含關鍵字本身，否則「無法走」會自我否定） */
 function isNegated(text, idx){
-  const win = text.slice(Math.max(0,idx-3), idx+1);
+  const win = text.slice(Math.max(0,idx-3), idx);
   return NEG.some(n=> win.includes(n));
 }
 
-/* 潰瘍關鍵字之後 ~12 字內出現「好了/癒合」且非「沒好」→ 判為已癒合 */
+/* 潰瘍關鍵字之後 ~6 字內出現「好了/癒合」且非「沒好」→ 判為已癒合。
+   視窗刻意窄：避免「現在有傷口，之前破的已經好了」把新潰瘍誤判為已癒合 */
 function isHealed(text, idx, len){
-  const after = text.slice(idx, idx+len+12);
+  const after = text.slice(idx, idx+len+6);
   if(NOT_HEALED.some(n=> after.includes(n))) return false;
   return HEALED.some(h=> after.includes(h));
 }
@@ -517,7 +578,7 @@ function override(i, v){
   chip.textContent = v; chip.className = "sc sc"+v;
   renderTotals(LAST.results);
   renderQuestions(LAST.results);
-  if(!LAST.ccManual){ LAST.cc = genCC(); paintCC(); }
+  refreshCC();
   renderSummary();
 }
 
@@ -541,13 +602,18 @@ function renderTotals(results){
 function deriveCEAP(results){
   const by = {};
   results.forEach(r=> by[r.dom.key]=r.score);
+  const raw = LAST?.raw||"";
   const hasUlcerActive = by.ulcerN>0 || by.ulcerT>0 || by.ulcerS>0;
-  const healedUlcer = /好了|癒合|之前.*傷口|以前破|痊癒|結疤|已經好/.test(LAST?.raw||"");
+  // 已癒合：要同時有潰瘍字眼＋癒合字眼（與 HEALED 詞表同步），避免「濕疹好了」誤觸
+  const healedUlcer = /傷口|潰瘍|破/.test(raw) && (HEALED.some(h=>raw.includes(h)) || /之前.*傷口|以前破/.test(raw));
+  // 蜘蛛絲判斷看「靜脈曲張項命中的關鍵字」而非全文，避免附帶提到蜘蛛絲就整個降級 C1
+  const vr = results.find(r=>r.dom.key==="veins");
+  const spiderHit = !!(vr && vr.hit && /蜘蛛|微血管|網狀|細/.test(vr.hit));
   const c4b = by.indur>0;                 // 硬化 → 脂性皮膚硬化
   const c4a = by.pigment>0 || by.inflam>0;// 色素／濕疹
   const c3  = by.edema>0;
-  const c2  = by.veins>=1 && !/蜘蛛|微血管|網狀/.test(LAST?.raw||"");
-  const c1  = /蜘蛛|微血管|網狀|細.*血管/.test(LAST?.raw||"");
+  const c2  = by.veins>=2 || (by.veins===1 && !spiderHit);
+  const c1  = spiderHit || (!by.veins && /蜘蛛|微血管|網狀|細.*血管/.test(raw));
 
   if(hasUlcerActive) return {c:"C6", desc:"活動性靜脈性潰瘍"};
   if(healedUlcer && !hasUlcerActive) return {c:"C5", desc:"已癒合之靜脈性潰瘍"};
@@ -578,7 +644,7 @@ function initVDS(results, text){
   document.getElementById("vdsSelect").value = best.s;
   paintVDS();
 }
-function setVDS(v){ LAST.vds.score=parseInt(v,10); LAST.vds.manual=true; paintVDS(); renderSummary(); }
+function setVDS(v){ LAST.vds.score=parseInt(v,10); LAST.vds.manual=true; paintVDS(); refreshCC(); renderSummary(); }
 function paintVDS(){
   const vds = LAST.vds;
   const chip = document.getElementById("vdsChip");
@@ -626,7 +692,7 @@ function toggleVillalta(){
   const on = document.getElementById("dvtToggle").checked;
   document.getElementById("villaltaBody").classList.toggle("hide", !on);
   if(LAST&&LAST.villalta) LAST.villalta.active = on;
-  if(LAST && !LAST.ccManual){ LAST.cc = genCC(); paintCC(); }
+  refreshCC();
   renderSummary();
 }
 function renderVillalta(){
@@ -651,7 +717,7 @@ function setVillalta(i,v){
   it.score=parseInt(v,10); it.manual=true;
   const chip=document.getElementById("vil-"+i);
   chip.textContent=v; chip.className="sc sc"+v;
-  paintVillaltaTotal(); renderSummary();
+  paintVillaltaTotal(); refreshCC(); renderSummary();
 }
 function villaltaScore(){
   const items=LAST.villalta.items;
@@ -715,7 +781,7 @@ function setCiviq(i,v){
   if(!LAST||!LAST.civiq) return;
   LAST.civiq.vals[i]=parseInt(v,10);
   LAST.civiq.touched=true;
-  paintCiviq(); renderSummary();
+  paintCiviq(); refreshCC(); renderSummary();
 }
 function civiqScore(){
   const v=LAST.civiq.vals;
@@ -818,15 +884,132 @@ function renderQuestions(results){
 }
 
 /* ---------- 摘要 ---------- */
+/* ---------- 回診模式：解析上次紀錄 → 重算後自動比較 ---------- */
+const CEAP_ORDER = ["C0","C1","C2","C3","C4a","C4b","C5","C6"];
+let FOLLOWUP = {on:false, prev:null};
+
+/* 從貼上的上次紀錄抽分數。支援兩種來源：
+   1) 主訴摘要尾端的（VCSS 12/30、CEAP C4b、VDS 2…），含回診箭號格式 12→8/30（取箭號後的值）
+   2) 完整摘要（含逐項 0–3 分，可做逐項比較） */
+function parsePrev(s){
+  if(!s || !s.trim()) return null;
+  const p = {domains:{}};
+  // 數字 token 防呆：不吃日期（2026/06/30）、不吃範圍標註（0-3 / 0-100）、不吃箭號前值
+  const NUM = "(?<!\\d)(?<!\\d[\\/／])(?<![-–])(\\d{1,3})(?!\\d)(?!\\s*[-–]\\s*\\d)";
+  const ARR = "(?:\\s*(?:→|->|=>)\\s*)";
+  // 取「最後一次」出現：EMR 連續病歷通常由舊到新，最後一組＝最近一次
+  const last = (src, flags)=>{
+    const re = new RegExp(src, (flags||"").includes("g")?flags:(flags||"")+"g");
+    let m, r=null, c=0;
+    while((m=re.exec(s))!==null){ r=m; c++; if(m.index===re.lastIndex) re.lastIndex++; }
+    return {m:r, count:c};
+  };
+  const pick = (m,a,b)=> parseInt(m[a]!==undefined?m[a]:m[b],10);
+  let r;
+  r = last("VCSS[^\\n]{0,20}?"+NUM+"(?:\\s*[\\/／]\\s*30)?(?:"+ARR+NUM+")?\\s*[\\/／]\\s*30","i");
+  if(r.m){ const v=pick(r.m,2,1); if(v<=30) p.vcss=v; if(r.count>1) p.multi=true; }
+  r = last("CEAP[^C\\n]{0,24}?C\\s*([0-6])\\s*([ab])?(?:"+ARR+"C?\\s*([0-6])\\s*([ab])?)?","i");
+  if(r.m) p.ceap = r.m[3]!==undefined ? "C"+r.m[3]+(r.m[4]||"").toLowerCase() : "C"+r.m[1]+(r.m[2]||"").toLowerCase();
+  r = last("VDS[^\\n]{0,16}?"+NUM+"(?:"+ARR+NUM+")?","i");
+  if(r.m){ const v=pick(r.m,2,1); if(v<=3) p.vds=v; }
+  r = last("Villalta[^\\n]{0,16}?"+NUM+"(?:\\s*[\\/／]\\s*33)?(?:"+ARR+NUM+")?(?:\\s*[\\/／]\\s*33)?","i");
+  if(r.m){ const v=pick(r.m,2,1); if(v<=33) p.villalta=v; }
+  r = last("GIS[^\\n]{0,8}?"+NUM+"(?:\\s*[\\/／]\\s*100)?(?:"+ARR+NUM+")?(?:\\s*[\\/／]\\s*100)?","i");
+  if(!r.m) r = last("CIVIQ(?:-20)?[^\\n]{0,10}?"+NUM+"(?:\\s*[\\/／]\\s*100)?(?:"+ARR+NUM+")?\\s*[\\/／]\\s*100","i");
+  if(r.m){ const v=pick(r.m,2,1); if(v<=100) p.civiq=v; }
+  DOMAINS.forEach(d=>{
+    const rr = last(d.name.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"\\s*[:：]\\s*([0-3])","");
+    if(rr.m) p.domains[d.key]=parseInt(rr.m[1],10);
+  });
+  const any = p.vcss!=null||p.ceap!=null||p.vds!=null||p.villalta!=null||p.civiq!=null||Object.keys(p.domains).length>0;
+  return any ? p : null;
+}
+function toggleFollowUp(){
+  FOLLOWUP.on = document.getElementById("fuToggle").checked;
+  document.getElementById("fuBox").classList.toggle("hide", !FOLLOWUP.on);
+  document.getElementById("q5").classList.toggle("hide", FOLLOWUP.on);
+  document.getElementById("fq").classList.toggle("hide", !FOLLOWUP.on);
+  prevChanged();
+}
+function prevChanged(){
+  FOLLOWUP.prev = FOLLOWUP.on ? parsePrev(document.getElementById("prevText").value) : null;
+  if(!LAST) return;
+  if(FOLLOWUP.on && FOLLOWUP.prev){ renderCompare(); document.getElementById("compareCard").classList.remove("hide"); }
+  else document.getElementById("compareCard").classList.add("hide");
+  if(!LAST.ccManual){ LAST.cc = genCC(); paintCC(); }
+  renderSummary();
+}
+function cmpArrow(prev, now, order){
+  if(prev==null || prev===undefined) return '<span class="hint">（無上次值）</span>';
+  let pi=prev, ni=now;
+  if(order){
+    pi=order.indexOf(prev); ni=order.indexOf(now);
+    if(pi<0 && prev==="C4") pi=order.indexOf("C4a");
+    if(pi<0 || ni<0) return '<span class="hint">—</span>';
+  }
+  if(ni<pi) return '<span style="color:#3f7d5c;font-weight:700">▼ 改善</span>';
+  if(ni>pi) return '<span style="color:#c05545;font-weight:700">▲ 惡化</span>';
+  return '<span style="color:#6b7d75;font-weight:700">— 持平</span>';
+}
+function renderCompare(){
+  const p = FOLLOWUP.prev; if(!p||!LAST) return;
+  const total = LAST.results.reduce((a,x)=>a+x.score,0);
+  const ceap = deriveCEAP(LAST.results).c;
+  const vds = LAST.vds ? LAST.vds.score : 0;
+  const stat = (lab, prev, now, denom, order)=>`
+    <div class="stat"><div class="lab">${lab}</div>
+      <div class="val" style="font-size:22px;padding-top:6px">${prev!=null?prev+" → ":""}${now}${denom?`<small style="font-size:12px;color:#6b7d75"> ${denom}</small>`:""}</div>
+      <div style="margin-top:4px;font-size:13px">${cmpArrow(prev, now, order)}</div></div>`;
+  let html = '';
+  if(p.multi) html += '<div class="hint" style="margin:0 0 8px;color:#c98a3a">⚠ 上次紀錄偵測到多組分數，已取最後一組（通常為最近一次）</div>';
+  html += '<div class="totals" style="margin-top:0">';
+  html += stat("VCSS 總分", p.vcss, total, "/30");
+  html += stat("CEAP", p.ceap, ceap, null, CEAP_ORDER);
+  html += stat("VDS", p.vds, vds);
+  if(LAST.villalta && LAST.villalta.active) html += stat("Villalta", p.villalta, villaltaScore().total, "/33");
+  if(LAST.civiq && LAST.civiq.touched) html += stat("CIVIQ GIS", p.civiq, civiqScore().gis, "/100");
+  html += '</div>';
+  if(Object.keys(p.domains).length){
+    html += '<div style="overflow-x:auto;margin-top:12px"><table><thead><tr><th>VCSS 項目</th><th>上次</th><th>本次</th><th>變化</th></tr></thead><tbody>';
+    LAST.results.forEach(r=>{
+      const pv = p.domains[r.dom.key];
+      html += `<tr><td class="dom">${r.dom.name}</td><td>${pv!=null?pv:"—"}</td>
+        <td><span class="sc sc${r.score}">${r.score}</span></td>
+        <td>${pv!=null?cmpArrow(pv,r.score):'<span class="hint">—</span>'}</td></tr>`;
+    });
+    html += '</tbody></table></div>';
+  }
+  document.getElementById("compareBody").innerHTML = html;
+}
+/* 分數/比較狀態變動時，統一刷新主訴與比較卡（醫師手改過的主訴不覆蓋） */
+function refreshCC(){
+  if(!LAST) return;
+  if(!LAST.ccManual){ LAST.cc = genCC(); paintCC(); }
+  if(FOLLOWUP.on && FOLLOWUP.prev) renderCompare();
+}
+/* 主訴尾端的分數串；回診且該項有上次值時用「上次→本次」箭號 */
+function scoreTail(){
+  const total = LAST.results.reduce((a,x)=>a+x.score,0);
+  const ceap = deriveCEAP(LAST.results).c;
+  const vds = LAST.vds ? LAST.vds.score : 0;
+  const p = (FOLLOWUP.on && FOLLOWUP.prev) ? FOLLOWUP.prev : {};
+  const f = (lab, prev, now, denom)=> lab+" "+((prev!=null&&prev!==now)?prev+"→":"")+now+(denom||"");
+  let t = f("VCSS", p.vcss, total, "/30")+"、"+f("CEAP", p.ceap, ceap)+"、"+f("VDS", p.vds, vds);
+  if(LAST.villalta && LAST.villalta.active) t += "、"+f("Villalta", p.villalta, villaltaScore().total, "/33");
+  if(LAST.civiq && LAST.civiq.touched) t += "、"+f("CIVIQ", p.civiq, civiqScore().gis, "/100");
+  return t;
+}
+
 /* ---------- 主訴摘要（50–100 字，病歷記載用）：由解析結果規則式組句 ---------- */
 function genCC(){
   const raw = LAST.raw;
   const by = {}; LAST.results.forEach(x=> by[x.dom.key]=x.score);
   const ceap = deriveCEAP(LAST.results);
 
-  // 患側與部位
+  // 患側與部位（「左腳沒問題」這種明講正常的那側不算患側）
   const both = /兩隻|兩腳|兩條腿|雙側|兩邊|兩腿|兩下肢|左右腳|左右腿/.test(raw);
-  const L=/左/.test(raw), R=/右/.test(raw);
+  const sideNormal = s => new RegExp(s+"(腳|腿|邊|側)?[^，。 ]{0,4}(正常|沒有問題|沒問題|沒事|好好的)").test(raw);
+  const L=/左/.test(raw)&&!sideNormal("左"), R=/右/.test(raw)&&!sideNormal("右");
   const side=(both||(L&&R))?"雙側":L?"左":R?"右":"";
   const hasCalf=/小腿/.test(raw), hasThigh=/大腿/.test(raw);
   const loc=(hasCalf&&hasThigh)?"下肢":hasThigh?"大腿":hasCalf?"小腿":"下肢";
@@ -838,11 +1021,14 @@ function genCC(){
 
   const seg=[];
   if(LAST.villalta && LAST.villalta.active) seg.push("有DVT病史");
-  const spider=/蜘蛛|微血管|網狀/.test(raw);
+  // 蜘蛛絲與否看「靜脈曲張項命中的關鍵字」，附帶提到蜘蛛絲不可把真曲張降級
+  const vr = LAST.results.find(x=>x.dom.key==="veins");
+  const spider = (vr && vr.hit) ? /蜘蛛|微血管|網狀|細/.test(vr.hit) : /蜘蛛|微血管|網狀/.test(raw);
   if(by.veins>0 && !spider) seg.push(side+loc+"靜脈曲張"+dur);
   else if(spider) seg.push(side+loc+"微血管絲擴張"+dur);
 
-  const daily=/天天|每天|每日/.test(raw), std=/久站|站久|走久|久坐/.test(raw), pm=/下午|傍晚|晚上/.test(raw);
+  // 「每天」必須接近疼痛詞才算每日症狀（避免「每天穿彈性襪」誤判）
+  const daily=/(每天|天天|每日).{0,6}?(痠|脹|痛|沉重|不舒服|抽筋)/.test(raw), std=/久站|站久|走久|久坐/.test(raw), pm=/下午|傍晚|晚上/.test(raw);
   const im = raw.match(/影響(工作|上班|睡眠|走路|生活|日常|活動)/);
   if(by.pain===3) seg.push("每日疼痛需止痛藥且明顯影響活動");
   else if(by.pain===2) seg.push((daily?"每日":std?"久站後":"")+"痠脹沉重"+(im?"、影響"+im[1]:""));
@@ -874,16 +1060,28 @@ function genCC(){
   if(out.length>100){ parts=parts.filter(s=>!s.includes("彈性襪")); out=parts.join("，")+"。"; }
   if(out.length>100) out=out.replace("、晨起消退","");
 
-  // 過短：補臨床上有意義的陰性所見
+  // 過短：補臨床上有意義的陰性所見。
+  // 防呆：原文若「非否定地」提到該症狀（只是關鍵字沒抓到），寧可留白也不寫陰性
+  const posMention = (symRe, negRe)=> symRe.test(raw) && !negRe.test(raw);
   const negs=[];
-  if(by.pain===0) negs.push("無疼痛");
-  if(by.edema===0) negs.push("無明顯水腫");
-  if(by.pigment===0&&by.indur===0&&by.inflam===0) negs.push("無皮膚變化");
-  if(by.ulcerN===0&&ceap.c!=="C5") negs.push("無潰瘍病史");
+  if(by.pain===0 && !posMention(/痛|痠|脹/, /不痛|不會痛|沒有痛|不痠|不會痠|不脹/)) negs.push("無疼痛");
+  if(by.edema===0 && !posMention(/腫/, /不腫|沒腫|沒有腫|不會腫|消腫/)) negs.push("無明顯水腫");
+  if(by.pigment===0&&by.indur===0&&by.inflam===0
+     && !posMention(/變黑|發黑|色素|變硬|癢|濕疹|變色/, /沒變黑|沒有變黑|沒變色|沒有變色|皮膚沒變|不癢/)) negs.push("無皮膚變化");
+  if(by.ulcerN===0&&ceap.c!=="C5"
+     && !posMention(/傷口|潰瘍|破洞/, /沒有傷口|沒傷口|無傷口|沒破|沒有破/)) negs.push("無潰瘍病史");
   if(by.comp===0) negs.push("未使用彈性襪");
   let body=out.slice(0,-1), i=0;
   while((body+"。").length<50 && i<negs.length) body+="，"+negs[i++];
-  return body+"。";
+
+  // 回診：開頭標示整體趨勢（與上次 VCSS 總分比）
+  if(FOLLOWUP.on && FOLLOWUP.prev){
+    const totalNow = LAST.results.reduce((a,x)=>a+x.score,0);
+    const pv = FOLLOWUP.prev.vcss;
+    const trend = pv==null ? "" : totalNow<pv ? "，整體較前改善" : totalNow>pv ? "，整體較前惡化" : "，整體大致同前";
+    body = "回診"+trend+"："+body;
+  }
+  return body+"。（"+scoreTail()+"）";
 }
 function paintCC(){
   document.getElementById("ccText").value = LAST.cc||"";
@@ -892,8 +1090,8 @@ function paintCC(){
 function ccCountPaint(){
   const n=(LAST.cc||"").length;
   const el=document.getElementById("ccCount");
-  el.textContent = n?`${n} 字${n<50?"・偏短":n>100?"・偏長":""}`:"";
-  el.style.color = (n<50||n>100)?"#c98a3a":"#6b7d75";
+  el.textContent = n?`${n} 字${n<55?"・偏短":n>145?"・偏長":""}`:"";
+  el.style.color = (n<55||n>145)?"#c98a3a":"#6b7d75";
 }
 function onCCInput(){
   LAST.cc=document.getElementById("ccText").value;
@@ -936,6 +1134,17 @@ function renderSummary(){
     civLine = `\n\n【CIVIQ-20 生活品質（意譯參考版）】\n總指數 GIS：${c.gis} / 100（越高影響越大）；${c.dims.map(d=>d[0]+" "+d[1]).join("・")}`;
   }
 
+  let cmpLine = "";
+  if(FOLLOWUP.on && FOLLOWUP.prev){
+    const p = FOLLOWUP.prev, bits = [];
+    if(p.vcss!=null) bits.push(`VCSS ${p.vcss}→${total}${total===p.vcss?"（持平）":total<p.vcss?`（改善 ${p.vcss-total} 分）`:`（惡化 ${total-p.vcss} 分）`}`);
+    if(p.ceap) bits.push(`CEAP ${p.ceap}→${ceap.c}`);
+    if(p.vds!=null) bits.push(`VDS ${p.vds}→${vds}`);
+    if(p.villalta!=null && LAST.villalta && LAST.villalta.active) bits.push(`Villalta ${p.villalta}→${villaltaScore().total}`);
+    if(p.civiq!=null && LAST.civiq && LAST.civiq.touched) bits.push(`CIVIQ ${p.civiq}→${civiqScore().gis}`);
+    if(bits.length) cmpLine = `\n\n【回診比較（上次→本次）】\n${bits.join("；")}`;
+  }
+
   const txt =
 `主訴：${LAST.cc||""}
 
@@ -948,7 +1157,7 @@ ${lines}
 CEAP 臨床分級（依主訴推定）：${ceap.c}　${ceap.desc}
 　＊E/A/P 分級需都卜勒超音波確認
 
-【VDS 靜脈失能評分】${vds} — ${vdsLabel}${civLine}${ptsLine}
+【VDS 靜脈失能評分】${vds} — ${vdsLabel}${civLine}${ptsLine}${cmpLine}
 
 待補問／未涵蓋項目：${missing.length?missing.join("、"):"無明顯缺口"}
 
@@ -976,7 +1185,7 @@ function copySum(){
 function clearAll(){
   document.getElementById("input").value="";
   if(recOn) stopVoice(false);
-  ["resultCard","vdsCard","villaltaCard","civiqCard","qCard","sumCard"]
+  ["resultCard","compareCard","vdsCard","villaltaCard","civiqCard","qCard","sumCard"]
     .forEach(id=>document.getElementById(id).classList.add("hide"));
 }
 function loadExamples(){
