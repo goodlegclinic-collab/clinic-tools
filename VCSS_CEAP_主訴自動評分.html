@@ -116,6 +116,11 @@
   <!-- 1. 輸入 -->
   <div class="card">
     <h2><span class="n">1</span>貼上病人主訴（口語、台語直翻、片段都可以）</h2>
+    <div class="row" style="margin:0 0 10px">
+      <label style="font-size:14.5px;color:var(--green-d);font-weight:600">病歷號</label>
+      <input id="chartNo" type="text" placeholder="選填：上傳 Google Drive 統計用"
+        style="flex:1;max-width:280px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:14px;font-family:inherit">
+    </div>
     <label style="display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:14.5px;cursor:pointer;color:var(--green-d);font-weight:600">
       <input type="checkbox" id="fuToggle" onchange="toggleFollowUp()" style="width:17px;height:17px">
       回診病人（貼上上次紀錄 → 重新評分並自動比較）
@@ -276,7 +281,9 @@
     <pre class="sum" id="summary"></pre>
     <div class="row">
       <button class="btn-go" onclick="copySum()">複製摘要</button>
+      <button class="btn-ghost" onclick="uploadDrive()">☁ 上傳 Drive</button>
       <span class="hint" id="copyMsg" style="margin:0"></span>
+      <span class="hint" id="driveMsg" style="margin:0"></span>
     </div>
     <details>
       <summary>VCSS 十項評分標準速查</summary>
@@ -295,6 +302,30 @@
       <span class="hint" id="intakeMsg" style="margin:0"></span>
     </div>
     <div id="intakeBody" class="hide" style="margin-top:14px"></div>
+  </div>
+
+  <!-- Google Drive 連動設定 -->
+  <div class="card" id="driveCard">
+    <details>
+      <summary>⚙ Google Drive 連動設定（每台裝置設定一次）</summary>
+      <div class="hint" style="margin-top:10px">
+        先照 <a href="https://github.com/goodlegclinic-collab/clinic-tools#google-drive-連動5-分鐘設定" target="_blank" style="color:var(--green)">README 的五步驟</a>部署 Apps Script 接收器，
+        再把網址與密鑰貼進來。評分資料只會送到<strong>你自己的 Google 帳號</strong>（總表一列一筆＋病人資料夾建檔），不經過任何第三方。
+      </div>
+      <div style="margin-top:10px">
+        <input id="gasUrl" type="text" placeholder="Apps Script 網址：https://script.google.com/macros/s/…/exec"
+          style="width:100%;border:1px solid var(--line);border-radius:8px;padding:9px 10px;font-size:13px;font-family:inherit">
+      </div>
+      <div class="row" style="margin-top:8px">
+        <input id="gasToken" type="password" placeholder="密鑰（需與腳本內 TOKEN 一致）"
+          style="flex:1;min-width:180px;border:1px solid var(--line);border-radius:8px;padding:9px 10px;font-size:13px;font-family:inherit">
+        <label style="display:flex;align-items:center;gap:6px;font-size:13.5px;cursor:pointer">
+          <input type="checkbox" id="autoUpload" style="width:15px;height:15px">評分後自動上傳（需已填病歷號）
+        </label>
+        <button class="btn-ghost" onclick="saveDriveCfg()">儲存設定</button>
+        <span class="hint" id="cfgMsg" style="margin:0"></span>
+      </div>
+    </details>
   </div>
 
   <div class="disclaimer">
@@ -461,6 +492,8 @@ function run(){
     .forEach(id=>document.getElementById(id).classList.remove("hide"));
   if(FOLLOWUP.on && FOLLOWUP.prev){ renderCompare(); document.getElementById("compareCard").classList.remove("hide"); }
   else document.getElementById("compareCard").classList.add("hide");
+  // 設定「評分後自動上傳」且有病歷號 → 自動寫入 Drive
+  if(driveCfg().auto && driveCfg().url && document.getElementById("chartNo").value.trim()) uploadDrive();
   document.getElementById("resultCard").scrollIntoView({behavior:"smooth",block:"start"});
 }
 
@@ -1145,8 +1178,9 @@ function renderSummary(){
     if(bits.length) cmpLine = `\n\n【回診比較（上次→本次）】\n${bits.join("；")}`;
   }
 
+  const chartNo = document.getElementById("chartNo").value.trim();
   const txt =
-`主訴：${LAST.cc||""}
+`${chartNo?`病歷號：${chartNo}\n`:""}主訴：${LAST.cc||""}
 
 【VCSS 靜脈臨床嚴重度評分】
 VCSS 總分：${total} / 30（${sevText(total)}）
@@ -1173,6 +1207,65 @@ function renderRubric(){
   ).join("");
 }
 
+/* ---------- Google Drive 連動（透過自家 Apps Script 接收器） ---------- */
+function driveCfg(){ try{ return JSON.parse(localStorage.getItem("vcssDriveCfg")||"{}"); }catch(_){ return {}; } }
+function loadDriveCfg(){
+  const c = driveCfg();
+  document.getElementById("gasUrl").value = c.url||"";
+  document.getElementById("gasToken").value = c.token||"";
+  document.getElementById("autoUpload").checked = !!c.auto;
+}
+function saveDriveCfg(){
+  const cfg = {
+    url: document.getElementById("gasUrl").value.trim(),
+    token: document.getElementById("gasToken").value.trim(),
+    auto: document.getElementById("autoUpload").checked
+  };
+  localStorage.setItem("vcssDriveCfg", JSON.stringify(cfg));
+  const m = document.getElementById("cfgMsg");
+  m.textContent = "✓ 已儲存在此裝置"; m.style.color = "#3f7d5c";
+  setTimeout(()=> m.textContent="", 2500);
+}
+async function uploadDrive(){
+  const m = document.getElementById("driveMsg");
+  const c = driveCfg();
+  if(!LAST){ m.textContent = "請先評分"; m.style.color="#c98a3a"; return; }
+  if(!c.url){
+    m.textContent = "尚未設定連動 → 請至頁面底部「⚙ Google Drive 連動設定」"; m.style.color="#c98a3a";
+    document.getElementById("driveCard").querySelector("details").open = true;
+    document.getElementById("driveCard").scrollIntoView({behavior:"smooth"});
+    return;
+  }
+  const chart = document.getElementById("chartNo").value.trim();
+  if(!chart){ m.textContent = "請先填病歷號（最上方）"; m.style.color="#c98a3a";
+    document.getElementById("chartNo").focus(); return; }
+  const by = {}; LAST.results.forEach(r=> by[r.dom.key]=r.score);
+  const payload = {
+    token: c.token||"",
+    chartNo: chart,
+    visitType: (FOLLOWUP.on && FOLLOWUP.prev) ? "回診" : "初診",
+    vcss: LAST.results.reduce((a,x)=>a+x.score,0),
+    domains: by,
+    ceap: deriveCEAP(LAST.results).c,
+    vds: LAST.vds ? LAST.vds.score : 0,
+    villalta: (LAST.villalta && LAST.villalta.active) ? villaltaScore().total : "",
+    civiq: (LAST.civiq && LAST.civiq.touched) ? civiqScore().gis : "",
+    cc: LAST.cc||"",
+    summary: document.getElementById("summary").textContent
+  };
+  m.textContent = "☁ 上傳中…"; m.style.color = "#6b7d75";
+  try{
+    // Content-Type 用 text/plain：Apps Script 不處理 CORS preflight，這樣才收得到
+    const res = await fetch(c.url, {method:"POST",
+      headers:{"Content-Type":"text/plain;charset=utf-8"}, body: JSON.stringify(payload)});
+    const j = await res.json();
+    if(j.ok){ m.textContent = "✓ "+(j.msg||"已寫入 Google Drive"); m.style.color = "#3f7d5c"; }
+    else{ m.textContent = "✗ "+(j.error||"寫入失敗"); m.style.color = "#c05545"; }
+  }catch(err){
+    m.textContent = "✗ 上傳失敗：請檢查網址是否為 /exec 結尾、網路是否正常"; m.style.color = "#c05545";
+  }
+}
+
 /* ---------- 工具 ---------- */
 function copySum(){
   const t = document.getElementById("summary").textContent;
@@ -1184,6 +1277,7 @@ function copySum(){
 }
 function clearAll(){
   document.getElementById("input").value="";
+  document.getElementById("chartNo").value="";
   if(recOn) stopVoice(false);
   ["resultCard","compareCard","vdsCard","villaltaCard","civiqCard","qCard","sumCard"]
     .forEach(id=>document.getElementById(id).classList.add("hide"));
@@ -1199,6 +1293,7 @@ function loadExamples(){
 }
 loadExamples();
 buildCiviq();
+loadDriveCfg();
 
 /* ---------- 完整問診總表（沒有主訴時照著問） ---------- */
 const INTAKE = [
