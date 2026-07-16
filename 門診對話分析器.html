@@ -117,6 +117,21 @@
   .ft-vcss{background:#f2f6f9;color:#4a6d8c}
   .ft-analysis{background:#fdf3e3;color:#8a6420}
 
+  .dimrow{display:flex;align-items:center;gap:10px;margin:7px 0}
+  .dimrow .dn{flex:0 0 148px;font-size:14px;font-weight:600;color:var(--green-d)}
+  .dimrow .dbar{flex:1 1 120px;height:10px;background:#e2ebe6;border-radius:6px;overflow:hidden}
+  .dimrow .dbar i{display:block;height:100%;background:var(--green)}
+  .dimrow .dv{flex:0 0 auto;min-width:120px;font-size:12.5px;color:var(--muted);text-align:right}
+  .grade{display:inline-block;font-size:26px;font-weight:800;border-radius:12px;padding:2px 18px}
+  .gA{background:#e7efe9;color:#2f5f46}.gB{background:#f2f6f9;color:#4a6d8c}
+  .gC{background:#fdf3e3;color:#8a6420}.gD{background:#f3d3cc;color:#8f342a}
+  .cial{display:inline-flex;flex-direction:column;gap:2px;border:1px solid var(--line);border-radius:10px;
+    padding:8px 12px;margin:4px 6px 4px 0;font-size:13.5px;max-width:100%;vertical-align:top}
+  .cial b{color:var(--green-d)}
+  .cial.off{opacity:.6;border-style:dashed}
+  .cial .cq{font-size:12px;color:var(--muted)}
+  .coach{background:#f2f6f9;border:1px solid #dbe5ec;border-radius:12px;padding:4px 12px 10px;margin-top:12px}
+  .coach .todo .tag{background:#fff}
   .dstats{display:flex;gap:12px;flex-wrap:wrap}
   .dstat{flex:1 1 130px;background:var(--chip);border-radius:12px;padding:11px 14px;text-align:center}
   .dstat .lab{font-size:12px;color:var(--muted)}
@@ -259,9 +274,30 @@
     <div class="qbox" id="qList"></div>
   </div>
 
-  <!-- 8. 摘要 -->
+  <!-- 8. 對話品質計分卡 -->
+  <div class="card hide" id="qualityCard">
+    <h2><span class="n">8</span>對話品質計分卡 <span class="hint" style="margin:0">SPIN・FAB・異議處理・收尾・Cialdini</span></h2>
+    <div class="totals" style="margin-top:0">
+      <div class="stat"><div class="lab">品質總分</div>
+        <div class="val"><span id="qTotal">0</span><small> /100</small></div></div>
+      <div class="stat"><div class="lab">等級</div>
+        <div style="margin-top:8px"><span class="grade" id="qGrade">—</span></div></div>
+      <div class="stat" style="flex:2 1 240px"><div class="lab">本次最該補強</div>
+        <div class="hint" id="qTop" style="margin-top:8px;font-weight:600;text-align:left">—</div></div>
+    </div>
+    <div id="qDims" style="margin-top:14px"></div>
+    <div class="cat">說服原則使用（Cialdini 影響力六原則）</div>
+    <div id="cialChips"></div>
+    <div class="coach">
+      <div class="cat" style="margin-top:8px">🎯 給醫師的教練建議（依對成交的影響排序）</div>
+      <div id="coachList"></div>
+    </div>
+    <div class="legend">依 SPIN Selling（需求探詢）、FAB（特色→好處→證據）、LAER（異議處理）、AIDA（收尾行動）與 Cialdini 影響力原則做規則式偵測。醫療溝通以誠信與病人利益為前提——這些模型是用來「讓病人安心做對決策」，不是話術操弄。無標記逐字稿的醫病歸屬為推定，結果供參考。</div>
+  </div>
+
+  <!-- 9. 摘要 -->
   <div class="card hide" id="sumCard">
-    <h2><span class="n">8</span>病歷摘要（一鍵複製）</h2>
+    <h2><span class="n">9</span>病歷摘要（一鍵複製）</h2>
     <div style="margin-bottom:6px">
       <b style="color:var(--green-d);font-size:14px">主訴摘要（50–100 字，病歷記載用）</b>
       <span class="hint" id="ccCount" style="margin-left:8px"></span>
@@ -279,6 +315,36 @@
       <span class="hint" id="copyMsg" style="margin:0"></span>
       <span class="hint" id="driveMsg" style="margin:0"></span>
     </div>
+  </div>
+
+  <!-- 💰 成交回報與成交率分析 -->
+  <div class="card" id="outcomeCard">
+    <details>
+      <summary>💰 成交回報與成交率分析（事後回填也可以）</summary>
+      <div class="hint" style="margin-top:10px">
+        分析上傳時會一併帶入下面選的成交狀態。病人「回去考慮」之後才決定？→ 回來這裡：填最上方病歷號 → 選狀態 → 按回填，
+        會更新「門診對話分析總表」該病人最近一筆。累積一段時間後按「📈 成交率分析」，工具會對照<strong>對話品質 × 成交結果</strong>給出改進建議。
+      </div>
+      <div class="row" style="margin-top:10px">
+        <select id="outcomeState" style="padding:9px 8px">
+          <option value="追蹤中">⏳ 追蹤中（尚未決定）</option>
+          <option value="當場成交">✅ 當場成交</option>
+          <option value="後續成交">✅ 後續成交</option>
+          <option value="未成交">❌ 未成交</option>
+        </select>
+        <input id="outcomeItem" type="text" placeholder="成交項目（例：微波消融＋鉤除）"
+          style="flex:1;min-width:170px;border:1px solid var(--line);border-radius:8px;padding:9px 10px;font-size:14px;font-family:inherit">
+        <input id="outcomeAmount" type="text" placeholder="金額（選填）" inputmode="numeric"
+          style="width:120px;border:1px solid var(--line);border-radius:8px;padding:9px 10px;font-size:14px;font-family:inherit">
+        <button class="btn-go" onclick="submitOutcome()">☁ 回填成交結果</button>
+        <span class="hint" id="outcomeMsg" style="margin:0"></span>
+      </div>
+      <div class="row">
+        <button class="btn-ghost" onclick="loadStats()">📈 成交率分析（讀取總表）</button>
+        <span class="hint" id="statsMsg" style="margin:0"></span>
+      </div>
+      <div id="statsBody"></div>
+    </details>
   </div>
 
   <!-- Google Drive 連動設定 -->
@@ -720,7 +786,7 @@ function detectConcerns(flat, hasSpeakers){
     const quote = s.length>60 ? s.slice(0,60)+"…" : s;
     CONCERNS.forEach(c=>{
       if(c.kw.some(k=> low.includes(k.toLowerCase()))){
-        bag[c.key] = bag[c.key] || {name:c.name, quotes:[]};
+        bag[c.key] = bag[c.key] || {key:c.key, name:c.name, quotes:[]};
         if(bag[c.key].quotes.length<3 && !bag[c.key].quotes.includes(quote)) bag[c.key].quotes.push(quote);
       }
     });
@@ -775,6 +841,155 @@ function excerpt(raw, kw){
 }
 
 /* =====================================================================
+   對話品質計分卡：SPIN／FAB／LAER 異議處理／AIDA 收尾／Cialdini
+   ===================================================================== */
+const OBJ_RESPONSES = {
+  cost:{re:/(分期|刷卡|實支實付|保險|理賠|診斷書|收據|明細|包含|含(術後)?(追蹤|回診)|一次(處理|解決)|價值|划算)/,
+    tip:"費用異議只回了價格不夠：把「含術後追蹤回診、實支實付大多可理賠、可分期」講完整，再請櫃檯給費用明細。"},
+  pain:{re:/(局部麻醉|不用全身麻醉|麻藥|睡一覺|不太痛|痠痠的|輕微|舒眠|最痛.{0,6}(就是|只有))/,
+    tip:"怕痛異議未處理：說明局部麻醉流程＋多數病人實際感受，可補一句「最痛就是打麻藥那幾秒，之後只有痠脹感」。"},
+  recov:{re:/(當天(回家|往返|走路)|隔天|不用住院|馬上(可以)?(上班|走路)|恢復(很)?快|正常(上班|生活))/,
+    tip:"恢復期異議未處理：對到病人的工作型態回答（久站工作→「隔天就能站著上班」），比籠統說恢復快有力。"},
+  eff:{re:/(復發率|成功率|研究|數據|文獻|案例|保固|追蹤(計畫)?|處理(乾淨|到根源)|根源)/,
+    tip:"效果／復發異議未處理：給數字與追蹤計畫（復發率、術後超音波時程）——「不確定感」是未成交最大主因。"},
+  ins:{re:/(實支實付|理賠|診斷書|收據|申請|保險公司)/,
+    tip:"保險異議未處理：主動說「我們開診斷書與費用明細，實支實付大多可申請」。"},
+  sched:{re:/(安排|預約|時段|最快|下週|禮拜|檔期)/,
+    tip:"時程異議未處理：給兩個具體時段讓病人二選一，比「你再打來約」容易成交。"},
+};
+const CIALDINI = [
+  {key:"auth",  name:"權威",     re:/(專科|三項專科|主任|榮總|做過.{0,4}(幾百|上千|很多)|學會|冠軍|原廠|講師|fda|認證|最早引進|引進)/i,
+    tip:"提一句資歷或經驗量：「這款微波我是台灣最早使用的醫師之一」"},
+  {key:"proof", name:"社會認同", re:/(很多(病人|患者|人)|像你這樣|大部分(病人|人)|上(週|禮拜|個月).{0,8}(也有|才有)|案例)/,
+    tip:"講一個「跟他同情境」的病人故事：久站工作者、術後隔天就上班"},
+  {key:"commit",name:"承諾一致", re:/(先(排|約|做|照)|今天先|一步一步|先從|先安排(檢查|超音波)?)/,
+    tip:"先取得小承諾（先排超音波／先給報價）——成交是一連串的小 yes"},
+  {key:"recip", name:"互惠",     re:/(送你|幫你(多|先)|免費|不收|加做|附)/,
+    tip:"給一個小加值（衛教手冊、免費評估報告），先給再邀請決定"},
+  {key:"like",  name:"喜好／同理", re:/(辛苦|不容易|我理解|我懂|難怪|做得很好|很認真|謝謝)/,
+    tip:"先同理再衛教：「站一整天真的辛苦」——關係先於說服"},
+  {key:"scarce",name:"稀缺",     re:/(名額|只剩|檔期|比較滿|要等|排到.{0,4}(月|週|禮拜))/,
+    tip:"誠實告知檔期現況（「手術日通常排到三週後」），幫病人不拖延"},
+];
+const RISK_RE = /(風險|副作用|併發症|可能會(瘀青|麻|痠|腫)|注意事項)/;
+
+function analyzeQuality(){
+  const flat = LAST.flat, hasSp = LAST.parsed.hasSpeakers;
+  const docS=[], patS=[];
+  flat.forEach(f=>{
+    if(f.role==="doc") docS.push(f.s);
+    else if(f.role==="pat") patS.push(f.s);
+    // 無標記：問句與治療說明句推定為醫師
+    else (isQuestionSentence(f.s)||/建議|安排|幫你|我們可以|治療|手術|回診/.test(f.s)) ? docS.push(f.s) : patS.push(f.s);
+  });
+  const docText=docS.join("，"), docLow=docText.toLowerCase();
+  const docQ=docS.filter(isQuestionSentence).join("，");
+  // 無標記逐字稿：陳述句歸屬不可靠，說明／回應類偵測改用全文（醫師講解幾乎都在其中）
+  const srcText = hasSp ? docText : LAST.fullRaw;
+  const srcLow = srcText.toLowerCase();
+  const coach=[];   // {pri, txt}
+
+  /* --- SPIN 需求探詢 --- */
+  const spin = {
+    S:/(哪裡不舒服|怎麼了|多久了|什麼工作|做哪一?行|平常.{0,4}(站|坐)|以前.{0,6}(治療|開刀|看過)|家族|吃什麼藥)/.test(docQ+docLow),
+    P:new RegExp(INTAKE_Q_RE.source).test(docQ),
+    I:/(影響.{0,4}(工作|睡眠|生活|運動|心情)|拖著|不會自己好|越來越|惡化|加重|再不處理|放著)/.test(srcLow),
+    N:/(治療(好|完)|處理(好|完)|就可以|就能|恢復到|想不想|最希望|最困擾)/.test(srcLow),
+  };
+  const spinN = Object.values(spin).filter(Boolean).length;
+  if(!spin.I) coach.push({pri:2, tag:"SPIN·影響", txt:"問一題「影響性問題」放大痛點：「這樣腫脹有影響到你上班或睡眠嗎？」——SPIN 裡最能推動決策的一類。"});
+  if(!spin.N) coach.push({pri:2, tag:"SPIN·效益", txt:"收尾前讓病人自己說出好處：「如果處理好了，你最想先做什麼？」病人自己講的理由最有說服力。"});
+  if(!spin.S) coach.push({pri:3, tag:"SPIN·情境", txt:"情境再挖一層：「平常工作要站多久？以前治療過嗎？」後面的建議才有掛鉤。"});
+
+  /* --- FAB 特色→好處→證據 --- */
+  const hasF = LAST.treatments.some(t=>!/彈性襪|超音波/.test(t.name));
+  const hasB = /(當天(回家|往返)|不用住院|恢復(很)?快|瘀青(少|小)|比較不痛|疼痛少|不用穿彈性襪|正常(上班|走路|運動)|局部麻醉|傷口(很)?小|沒什麼疤|美觀|隔天)/.test(srcLow);
+  const hasE = /(超音波.{0,6}(看|給你看|照)|研究|文獻|數據|案例|做過|經驗|fda|認證|原廠|保固|復發率|成功率)/i.test(srcLow);
+  const fabScore = hasF ? (hasB&&hasE?100 : hasB?75 : 40) : null;
+  if(hasF && !hasB) coach.push({pri:2, tag:"FAB", txt:"有講到技術（微波／膠水…）但沒翻譯成病人聽得懂的好處：每講一個特色就接一句「對你的意思是——當天回家、隔天上班」。"});
+  if(hasF && hasB && !hasE) coach.push({pri:3, tag:"FAB·證據", txt:"補上證據：秀超音波影像、講經驗量或數據（「這型的血管我處理過幾百條」），好處＋證據才會被相信。"});
+
+  /* --- LAER 異議處理 --- */
+  const cats = LAST.concerns.cats;
+  let objHandled = 0;
+  cats.forEach(c=>{
+    const rule = OBJ_RESPONSES[c.key];
+    if(rule && rule.re.test(srcLow)) objHandled++;
+    else if(rule) coach.push({pri:1, tag:"異議·"+c.name, txt:rule.tip});
+  });
+  const objScore = cats.length ? Math.round(objHandled/cats.length*100) : null;
+
+  /* --- AIDA 收尾／下一步 --- */
+  const ctaScore = LAST.decision.key==="booked" ? 100 : LAST.orders.length ? 75 : 0;
+  if(ctaScore===0) coach.push({pri:1, tag:"收尾", txt:"對話沒有帶著「下一步」結束——永遠收在一個具體行動：排超音波、約回診、或給報價單，並給兩個時段二選一。"});
+
+  /* --- 傾聽佔比（有標記才算） --- */
+  let listenScore=null, patShare=null;
+  if(hasSp){
+    const ch = s=>s.replace(/\s/g,"").length;
+    const dc = docS.reduce((a,s)=>a+ch(s),0), pc = patS.reduce((a,s)=>a+ch(s),0);
+    if(dc+pc>0){
+      patShare = pc/(dc+pc);
+      listenScore = (patShare>=0.35&&patShare<=0.65) ? 100 : Math.max(0, Math.round(100-(Math.abs(patShare-0.5)-0.15)*300));
+      if(patShare<0.3) coach.push({pri:3, tag:"傾聽", txt:"病人只講了 "+Math.round(patShare*100)+"%——多用開放式問句讓病人多說；病人講越多、自己說服自己越多。"});
+    }
+  }
+
+  /* --- Cialdini --- */
+  const cial = CIALDINI.map(c=>{
+    const m = srcText.match(c.re);
+    return {def:c, used:!!m, quote:m?excerpt(srcText, m[0]):""};
+  });
+  const unusedKey = cial.filter(c=>!c.used && (c.def.key==="proof"||c.def.key==="commit"));
+  unusedKey.slice(0,2).forEach(c=> coach.push({pri:4, tag:"說服·"+c.def.name, txt:c.def.tip+"。"}));
+
+  /* --- 信任（權威／社會認同／風險告知） --- */
+  const hasRisk = RISK_RE.test(srcLow);
+  const trustScore = (hasRisk?40:0) + (cial.find(c=>c.def.key==="auth").used?30:0) + (cial.find(c=>c.def.key==="proof").used?30:0);
+  if(!hasRisk && hasF) coach.push({pri:3, tag:"信任", txt:"主動講風險與注意事項（可能瘀青、痠脹幾天）反而加分——信任是成交的地基，也是知情同意。"});
+
+  /* --- 加權總分（沒資料的面向不列入） --- */
+  const dims = [
+    {name:"異議處理（LAER）", score:objScore, w:.25, note:cats.length?`${objHandled}/${cats.length} 個疑慮有回應`:"病人沒提出明顯疑慮"},
+    {name:"需求探詢（SPIN）", score:Math.round(spinN/4*100), w:.20, note:["S 情境","P 問題","I 影響","N 效益"].map((n,i)=>Object.values(spin)[i]?"✓"+n:"✗"+n).join("　")},
+    {name:"收尾行動（AIDA）", score:ctaScore, w:.20, note:ctaScore===100?"已約定治療":ctaScore?"有下一步（回診／檢查）":"沒有下一步"},
+    {name:"效益翻譯（FAB）", score:fabScore, w:.15, note:hasF?`特色✓　好處${hasB?"✓":"✗"}　證據${hasE?"✓":"✗"}`:"未討論治療方案"},
+    {name:"傾聽佔比", score:listenScore, w:.10, note:patShare!=null?`病人發言 ${Math.round(patShare*100)}%（理想 35–65%）`:"無說話者標記，不計"},
+    {name:"信任建立", score:trustScore, w:.10, note:`${cial.find(c=>c.def.key==="auth").used?"✓":"✗"}權威　${cial.find(c=>c.def.key==="proof").used?"✓":"✗"}社會認同　${hasRisk?"✓":"✗"}風險告知`},
+  ];
+  let wSum=0, sSum=0;
+  dims.forEach(d=>{ if(d.score!=null){ wSum+=d.w; sSum+=d.score*d.w; } });
+  const total = wSum ? Math.round(sSum/wSum) : 0;
+  const grade = total>=85?"A":total>=70?"B":total>=55?"C":"D";
+
+  coach.sort((a,b)=>a.pri-b.pri);
+  return {total, grade, dims, cial, coach:coach.slice(0,6),
+    spinN, spinStr:`${spinN}/4`,
+    objStr: cats.length?`${objHandled}/${cats.length}`:"—",
+    ctaStr: ctaScore===100?"已成交":ctaScore?"有":"無",
+    hasSp};
+}
+
+function renderQuality(){
+  const q = LAST.quality;
+  document.getElementById("qTotal").textContent = q.total;
+  const g = document.getElementById("qGrade");
+  g.textContent = q.grade; g.className = "grade g"+q.grade;
+  document.getElementById("qTop").textContent = q.coach.length ? "〔"+q.coach[0].tag+"〕"+q.coach[0].txt : "✓ 各面向都有做到，維持水準";
+  document.getElementById("qDims").innerHTML = q.dims.map(d=>`
+    <div class="dimrow">
+      <span class="dn">${d.name}</span>
+      <span class="dbar"><i style="width:${d.score==null?0:d.score}%;${d.score!=null&&d.score<55?"background:var(--amber)":""}"></i></span>
+      <span class="dv">${d.score==null?"—":d.score}　${esc(d.note)}</span>
+    </div>`).join("");
+  document.getElementById("cialChips").innerHTML = q.cial.map(c=>
+    `<span class="cial${c.used?"":" off"}"><b>${c.used?"✓":"○"} ${c.def.name}</b><span class="cq">${c.used?esc(c.quote):esc(c.def.tip)}</span></span>`).join("");
+  document.getElementById("coachList").innerHTML = q.coach.length
+    ? q.coach.map((c,i)=>`<div class="todo"><span class="tag">${i+1}·${esc(c.tag)}</span><span>${esc(c.txt)}</span></div>`).join("")
+    : `<div class="empty">✓ 這次對話各面向都有做到。</div>`;
+}
+
+/* =====================================================================
    主流程
    ===================================================================== */
 let LAST = null;
@@ -825,12 +1040,14 @@ function run(){
   renderTx();
   renderConcerns();
   renderTodos();
+  LAST.quality = analyzeQuality();
+  renderQuality();
   LAST.cc = genCC(); LAST.ccManual = false;
   renderQuestions(results);
   renderSummary();
   paintCC();
 
-  ["overviewCard","resultCard","txCard","concernCard","todoCard","qCard","sumCard"]
+  ["overviewCard","resultCard","txCard","concernCard","todoCard","qCard","qualityCard","sumCard"]
     .forEach(id=>document.getElementById(id).classList.remove("hide"));
   if(FOLLOWUP.on && FOLLOWUP.prev){ renderCompare(); document.getElementById("compareCard").classList.remove("hide"); }
   else document.getElementById("compareCard").classList.add("hide");
@@ -1276,7 +1493,11 @@ CEAP 臨床分級（依對話推定）：${ceap.c}　${ceap.desc}
 【病人疑慮】${ccats||"無明顯疑慮"}
 【醫囑・待辦】
 ${orders||"  （無明確醫囑）"}
-【決策狀態】${LAST.decision.label.replace(/^[^\s]+\s/,"")}${cmpLine}
+【決策狀態】${LAST.decision.label.replace(/^[^\s]+\s/,"")}
+
+【對話品質】${LAST.quality.total}/100（${LAST.quality.grade}）　SPIN ${LAST.quality.spinStr}、異議處理 ${LAST.quality.objStr}、下一步 ${LAST.quality.ctaStr}
+【教練建議】
+${LAST.quality.coach.slice(0,3).map((c,i)=>`  ${i+1}. 〔${c.tag}〕${c.txt}`).join("\n")||"  （各面向都有做到）"}${cmpLine}
 
 待補問／未涵蓋項目：${missing.length?missing.join("、"):"無明顯缺口"}
 
@@ -1443,6 +1664,13 @@ async function uploadDrive(){
     concerns: LAST.concerns.cats.map(c=>c.name).join("、"),
     orders: LAST.orders.map(o=>o.s).join("；"),
     decision: LAST.decision.label.replace(/^[^\s]+\s/,""),
+    quality: LAST.quality.total,
+    spin: LAST.quality.spinStr,
+    objection: LAST.quality.objStr,
+    cta: LAST.quality.ctaStr,
+    outcome: document.getElementById("outcomeState").value,
+    outcomeItem: document.getElementById("outcomeItem").value.trim(),
+    outcomeAmount: document.getElementById("outcomeAmount").value.trim(),
     summary: document.getElementById("summary").textContent
   };
   m.textContent = "☁ 上傳中…"; m.style.color = "#6b7d75";
@@ -1454,6 +1682,77 @@ async function uploadDrive(){
   }catch(err){
     m.textContent = "✗ 上傳失敗：請檢查網址是否為 /exec 結尾、網路是否正常"; m.style.color = "#c05545";
   }
+}
+
+/* ---------- 成交回填與成交率分析 ---------- */
+async function submitOutcome(){
+  const m = document.getElementById("outcomeMsg");
+  const chart = document.getElementById("chartNo").value.trim();
+  if(!chart){ m.textContent="請先填最上方病歷號"; m.style.color="#c98a3a";
+    document.getElementById("chartNo").focus(); return; }
+  m.textContent = "☁ 回填中…"; m.style.color="#6b7d75";
+  try{
+    const j = await gasCall({action:"outcome", chartNo:chart,
+      outcome: document.getElementById("outcomeState").value,
+      outcomeItem: document.getElementById("outcomeItem").value.trim(),
+      outcomeAmount: document.getElementById("outcomeAmount").value.trim()}, m);
+    if(!j) return;
+    if(j.ok){ m.textContent="✓ "+(j.msg||"已回填"); m.style.color="#3f7d5c"; }
+    else{ m.textContent="✗ "+(j.error||"回填失敗"); m.style.color="#c05545"; }
+  }catch(_){ m.textContent="✗ 連線失敗（檢查 Drive 連動設定與腳本版本）"; m.style.color="#c05545"; }
+}
+async function loadStats(){
+  const m = document.getElementById("statsMsg");
+  m.textContent = "📈 讀取總表…"; m.style.color="#6b7d75";
+  try{
+    const j = await gasCall({action:"history"}, m);
+    if(!j) return;
+    if(!j.ok){ m.textContent="✗ "+(j.error||"讀取失敗"); m.style.color="#c05545"; return; }
+    m.textContent = "✓ 共 "+j.rows.length+" 筆分析紀錄"; m.style.color="#3f7d5c";
+    renderStats(j.rows);
+  }catch(_){ m.textContent="✗ 連線失敗（檢查 Drive 連動設定與腳本版本）"; m.style.color="#c05545"; }
+}
+function renderStats(rows){
+  const el = document.getElementById("statsBody");
+  const WIN = ["當場成交","後續成交"], LOSS = ["未成交"];
+  const known = rows.filter(r=> WIN.includes(r.outcome)||LOSS.includes(r.outcome));
+  const wins = known.filter(r=> WIN.includes(r.outcome));
+  const pending = rows.filter(r=> !WIN.includes(r.outcome) && !LOSS.includes(r.outcome));
+  const num = v => { const n = parseFloat(v); return isNaN(n)?null:n; };
+  const avg = a => a.length ? Math.round(a.reduce((x,y)=>x+y,0)/a.length) : null;
+  const qWin = avg(wins.map(r=>num(r.quality)).filter(v=>v!=null));
+  const qLoss = avg(known.filter(r=>LOSS.includes(r.outcome)).map(r=>num(r.quality)).filter(v=>v!=null));
+  const amount = wins.map(r=>num((r.outcomeAmount||"").toString().replace(/[^0-9.]/g,""))).filter(v=>v).reduce((a,b)=>a+b,0);
+
+  let html = '<div class="totals" style="margin-top:12px">';
+  html += `<div class="stat"><div class="lab">成交率（已知結果）</div><div class="val">${known.length?Math.round(wins.length/known.length*100)+"<small>%</small>":"—"}</div><div class="hint">${wins.length} 成交／${known.length} 已知</div></div>`;
+  html += `<div class="stat"><div class="lab">追蹤中</div><div class="val">${pending.length}<small> 筆</small></div></div>`;
+  html += `<div class="stat"><div class="lab">品質分：成交 vs 未成交</div><div class="val" style="font-size:22px;padding-top:6px">${qWin!=null?qWin:"—"} vs ${qLoss!=null?qLoss:"—"}</div></div>`;
+  if(amount) html += `<div class="stat"><div class="lab">成交金額合計</div><div class="val" style="font-size:22px;padding-top:6px">${amount.toLocaleString()}</div></div>`;
+  html += '</div>';
+
+  // 規則式洞察：未成交組最常缺什麼
+  if(known.length >= 5){
+    const lossRows = known.filter(r=> LOSS.includes(r.outcome));
+    const missRate = (rows2, test) => rows2.length ? Math.round(rows2.filter(test).length/rows2.length*100) : 0;
+    const insights = [];
+    const noCta = missRate(lossRows, r=> (r.cta||"")==="無");
+    const noCtaW = missRate(wins, r=> (r.cta||"")==="無");
+    if(noCta - noCtaW >= 20) insights.push(`未成交對話有 ${noCta}% 沒有收在「下一步」（成交組只有 ${noCtaW}%）→ 每次對話結束前固定排一個具體行動。`);
+    const objMiss = r => { const m2=(r.objection||"").match(/^(\d+)\/(\d+)$/); return m2 && +m2[1] < +m2[2]; };
+    const om = missRate(lossRows, objMiss), omW = missRate(wins, objMiss);
+    if(om - omW >= 20) insights.push(`未成交對話有 ${om}% 留下沒回應的疑慮（成交組 ${omW}%）→ 費用、怕痛、復發這三類異議準備標準話術。`);
+    const spinLow = r => { const m2=(r.spin||"").match(/^(\d+)\/4$/); return m2 && +m2[1] <= 2; };
+    const sl = missRate(lossRows, spinLow), slW = missRate(wins, spinLow);
+    if(sl - slW >= 20) insights.push(`未成交對話有 ${sl}% 探詢不足（SPIN ≤2/4，成交組 ${slW}%）→ 多問影響性與效益性問題。`);
+    if(qWin!=null && qLoss!=null && qWin-qLoss>=10) insights.push(`成交對話的品質分平均高 ${qWin-qLoss} 分——計分卡的建議照做，成交率會跟上。`);
+    html += insights.length
+      ? '<div class="cat">📊 數據洞察</div>'+insights.map(t=>`<div class="quote">${esc(t)}</div>`).join("")
+      : '<div class="hint" style="margin-top:8px">兩組差異還不明顯，繼續累積資料。</div>';
+  } else {
+    html += `<div class="hint" style="margin-top:8px">已知成交結果還不到 5 筆，先累積：每次分析上傳＋事後回填成交狀態，之後這裡會自動比對「成交 vs 未成交對話差在哪」。</div>`;
+  }
+  el.innerHTML = html;
 }
 
 /* ---------- 工具 ---------- */
@@ -1470,7 +1769,7 @@ function clearAll(){
   clearTimeout(autoTimer);
   document.getElementById("input").value="";
   document.getElementById("fileList").classList.add("hide");
-  ["overviewCard","resultCard","compareCard","txCard","concernCard","todoCard","qCard","sumCard"]
+  ["overviewCard","resultCard","compareCard","txCard","concernCard","todoCard","qCard","qualityCard","sumCard"]
     .forEach(id=>document.getElementById(id).classList.add("hide"));
 }
 

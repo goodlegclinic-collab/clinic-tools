@@ -8,6 +8,8 @@
  *   list         以病歷號找病人資料夾 → 回傳文字稿／紀錄檔清單（含日期子資料夾一層）
  *   get          以檔案 ID 取得文字內容（.txt/.md/Google 文件）
  *   latest       回傳資料夾內「最新的文字稿」；帶 since 時間戳可做自動監看
+ *   outcome      事後回填成交結果 → 更新分析總表該病歷號最近一筆
+ *   history      回傳分析總表最近數百筆（給工具端算成交率與品質×成交洞察）
  *
  * 部署步驟見 README「Google Drive 連動」章節。
  * ※ 更新這支腳本後，記得「部署 → 管理部署作業 → 編輯 → 新版本」才會生效；
@@ -42,6 +44,8 @@ function doPost(e) {
       case 'list':         return listFiles_(d);
       case 'get':          return getFile_(d);
       case 'latest':       return latest_(d);
+      case 'outcome':      return outcome_(d);
+      case 'history':      return history_(d);
       default:             return out_({ ok: false, error: '未知動作：' + d.action });
     }
   } catch (err) {
@@ -79,18 +83,25 @@ function saveVcss_(d) {
   return out_({ ok: true, msg: '已寫入「' + CONFIG.MASTER_NAME + '」第 ' + sh.getLastRow() + ' 列' + extra });
 }
 
-/* ================= 門診對話分析上傳 ================= */
+/* ================= 門診對話分析上傳／成交回填／統計 ================= */
+
+const ANALYSIS_HEADERS = ['時間', '病歷號', '就診', 'VCSS總分', 'CEAP', 'VDS',
+  '主訴摘要', '治療討論', '病人疑慮', '醫囑待辦', '決策狀態',
+  '品質總分', 'SPIN', '異議處理', '下一步', '成交狀態', '成交項目', '成交金額'];
 
 function saveAnalysis_(d) {
-  const ss = masterSheet_(CONFIG.ANALYSIS_MASTER_NAME, ['時間', '病歷號', '就診', 'VCSS總分',
-    'CEAP', 'VDS', '主訴摘要', '治療討論', '病人疑慮', '醫囑待辦', '決策狀態']);
-  const sh = ss.getSheets()[0];
+  const sh = masterSheet_(CONFIG.ANALYSIS_MASTER_NAME, ANALYSIS_HEADERS).getSheets()[0];
+  const headers = ensureHeaders_(sh, ANALYSIS_HEADERS);
   const ts = Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy-MM-dd HH:mm');
-  sh.appendRow([
-    ts, String(d.chartNo || ''), d.visitType || '',
-    d.vcss, d.ceap || '', d.vds,
-    d.cc || '', d.treatments || '', d.concerns || '', d.orders || '', d.decision || ''
-  ]);
+  appendByHeaders_(sh, headers, {
+    '時間': ts, '病歷號': String(d.chartNo || ''), '就診': d.visitType || '',
+    'VCSS總分': d.vcss, 'CEAP': d.ceap || '', 'VDS': d.vds,
+    '主訴摘要': d.cc || '', '治療討論': d.treatments || '', '病人疑慮': d.concerns || '',
+    '醫囑待辦': d.orders || '', '決策狀態': d.decision || '',
+    '品質總分': d.quality, 'SPIN': d.spin || '', '異議處理': d.objection || '',
+    '下一步': d.cta || '', '成交狀態': d.outcome || '追蹤中',
+    '成交項目': d.outcomeItem || '', '成交金額': d.outcomeAmount || ''
+  });
 
   let extra = '';
   if (CONFIG.PARENT_FOLDER_ID) {
@@ -101,6 +112,72 @@ function saveAnalysis_(d) {
     extra = '，病人資料夾已建檔';
   }
   return out_({ ok: true, msg: '已寫入「' + CONFIG.ANALYSIS_MASTER_NAME + '」第 ' + sh.getLastRow() + ' 列' + extra });
+}
+
+/** 事後回填成交：更新該病歷號「最近一筆」的成交欄位；找不到就補一列 */
+function outcome_(d) {
+  const sh = masterSheet_(CONFIG.ANALYSIS_MASTER_NAME, ANALYSIS_HEADERS).getSheets()[0];
+  const headers = ensureHeaders_(sh, ANALYSIS_HEADERS);
+  const chart = String(d.chartNo || '');
+  if (!chart) return out_({ ok: false, error: '缺少病歷號' });
+  const colChart = headers.indexOf('病歷號') + 1;
+  const set = { '成交狀態': d.outcome || '', '成交項目': d.outcomeItem || '', '成交金額': d.outcomeAmount || '' };
+  const last = sh.getLastRow();
+  if (last >= 2) {
+    const vals = sh.getRange(2, colChart, last - 1, 1).getValues();
+    for (let i = vals.length - 1; i >= 0; i--) {
+      if (String(vals[i][0]) === chart) {
+        const row = i + 2;
+        Object.keys(set).forEach(function (h) {
+          const c = headers.indexOf(h) + 1;
+          // 狀態一定更新；項目／金額留空就不覆蓋舊值
+          if (c > 0 && (set[h] !== '' || h === '成交狀態')) sh.getRange(row, c).setValue(set[h]);
+        });
+        return out_({ ok: true, msg: '已更新病歷號 ' + chart + ' 第 ' + row + ' 列的成交結果' });
+      }
+    }
+  }
+  const ts = Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy-MM-dd HH:mm');
+  appendByHeaders_(sh, headers, Object.assign({ '時間': ts, '病歷號': chart }, set));
+  return out_({ ok: true, msg: '總表沒有這個病歷號的分析紀錄，已補一列成交紀錄' });
+}
+
+/** 回傳最近數百筆分析紀錄（工具端計算成交率用） */
+function history_(d) {
+  const sh = masterSheet_(CONFIG.ANALYSIS_MASTER_NAME, ANALYSIS_HEADERS).getSheets()[0];
+  const headers = ensureHeaders_(sh, ANALYSIS_HEADERS);
+  const last = sh.getLastRow();
+  if (last < 2) return out_({ ok: true, rows: [] });
+  const n = Math.min(last - 1, 300);
+  const data = sh.getRange(last - n + 1, 1, n, headers.length).getValues();
+  const col = function (h) { return headers.indexOf(h); };
+  const rows = data.map(function (r) {
+    return {
+      date: String(r[col('時間')] || ''), chartNo: String(r[col('病歷號')] || ''),
+      visitType: String(r[col('就診')] || ''), decision: String(r[col('決策狀態')] || ''),
+      quality: r[col('品質總分')], spin: String(r[col('SPIN')] || ''),
+      objection: String(r[col('異議處理')] || ''), cta: String(r[col('下一步')] || ''),
+      outcome: String(r[col('成交狀態')] || ''), outcomeAmount: String(r[col('成交金額')] || '')
+    };
+  });
+  return out_({ ok: true, rows: rows });
+}
+
+/** 表頭防呆：舊版總表缺的欄位自動補在最後面，回傳目前表頭 */
+function ensureHeaders_(sh, wanted) {
+  const lastCol = Math.max(sh.getLastColumn(), 1);
+  const cur = sh.getRange(1, 1, 1, lastCol).getValues()[0].map(String);
+  let next = cur.filter(function (h) { return h !== ''; });
+  wanted.forEach(function (h) {
+    if (next.indexOf(h) < 0) {
+      sh.getRange(1, next.length + 1).setValue(h);
+      next.push(h);
+    }
+  });
+  return next;
+}
+function appendByHeaders_(sh, headers, obj) {
+  sh.appendRow(headers.map(function (h) { return obj[h] !== undefined ? obj[h] : ''; }));
 }
 
 /* ================= 文字稿：列出／取得／最新 ================= */
