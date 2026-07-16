@@ -1,0 +1,1514 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>門診對話分析器｜富足診所</title>
+<style>
+  :root{
+    --ink:#2b3a34; --muted:#6b7d75; --line:#dfe7e2;
+    --bg:#f4f7f5; --card:#ffffff; --green:#3f7d5c; --green-d:#2f5f46;
+    --amber:#c98a3a; --red:#c05545; --blue:#4a6d8c; --chip:#eef3f0;
+    --s0:#e7efe9; --s1:#fdf3e3; --s2:#f7e2d6; --s3:#f3d3cc;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;
+    line-height:1.6;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:960px;margin:0 auto;padding:24px 18px 80px}
+  header{text-align:center;padding:22px 0 8px}
+  header h1{margin:0;font-size:26px;letter-spacing:.5px;color:var(--green-d)}
+  header .sub{color:var(--muted);font-size:14px;margin-top:6px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;
+    padding:18px 18px;margin:16px 0;box-shadow:0 1px 3px rgba(40,70,55,.05)}
+  .card h2{margin:0 0 12px;font-size:17px;color:var(--green-d);
+    display:flex;align-items:center;gap:8px}
+  .card h2 .n{background:var(--green);color:#fff;width:24px;height:24px;border-radius:50%;
+    display:inline-flex;align-items:center;justify-content:center;font-size:13px;flex:0 0 auto}
+  textarea{width:100%;min-height:170px;border:1px solid var(--line);border-radius:10px;
+    padding:12px;font-size:15px;font-family:inherit;resize:vertical;color:var(--ink);background:#fcfdfc}
+  textarea:focus{outline:2px solid var(--green);outline-offset:1px}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
+  button{border:0;border-radius:10px;padding:11px 18px;font-size:15px;font-weight:600;
+    cursor:pointer;font-family:inherit;transition:.15s}
+  .btn-go{background:var(--green);color:#fff}
+  .btn-go:hover{background:var(--green-d)}
+  .btn-ghost{background:var(--chip);color:var(--green-d)}
+  .btn-ghost:hover{background:#e2ebe6}
+  .btn-watch{background:#f2f6f9;color:var(--blue);border:1px solid #dbe5ec}
+  .btn-watch.on{background:var(--blue);color:#fff;animation:pulse 2s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.65}}
+  .hint{color:var(--muted);font-size:13px;margin-top:8px}
+  .examples{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .examples span{background:var(--chip);border:1px dashed var(--line);border-radius:20px;
+    padding:5px 12px;font-size:13px;cursor:pointer;color:var(--green-d)}
+  .examples span:hover{background:#e2ebe6}
+
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{text-align:left;padding:9px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--muted);font-weight:600;font-size:12.5px;letter-spacing:.3px}
+  td.dom{font-weight:600;white-space:nowrap}
+  td.ev{color:var(--muted);font-size:13px}
+  td.ev mark{background:#fbf0cf;color:#7a5a1e;padding:0 3px;border-radius:3px}
+  select{border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:14px;
+    font-family:inherit;background:#fff;color:var(--ink)}
+  .sc{display:inline-block;min-width:22px;text-align:center;border-radius:6px;
+    padding:2px 8px;font-weight:700;font-size:14px}
+  .sc0{background:var(--s0);color:#3d5b4a}
+  .sc1{background:var(--s1);color:#8a6420}
+  .sc2{background:var(--s2);color:#a8552f}
+  .sc3{background:var(--s3);color:#8f342a}
+  tr.auto td{background:#fbfdfb}
+  .flag{font-size:11px;color:var(--amber);font-weight:600}
+
+  .totals{display:flex;gap:14px;flex-wrap:wrap;margin-top:6px}
+  .stat{flex:1 1 160px;background:var(--chip);border-radius:12px;padding:14px 16px;text-align:center}
+  .stat .lab{font-size:12px;color:var(--muted);letter-spacing:.5px}
+  .stat .val{font-size:30px;font-weight:800;color:var(--green-d);line-height:1.1;margin-top:2px}
+  .stat .val small{font-size:14px;color:var(--muted);font-weight:600}
+  .ceap-badge{display:inline-block;background:var(--green-d);color:#fff;font-weight:800;
+    font-size:22px;padding:3px 14px;border-radius:10px;margin-top:2px}
+
+  .qbox{background:#fbf7ef;border:1px solid #f0e4cd;border-radius:12px;padding:6px 4px}
+  .q{display:flex;gap:10px;padding:9px 12px;border-bottom:1px dashed #eadfc7}
+  .q:last-child{border-bottom:0}
+  .q .qi{color:var(--amber);font-weight:800;flex:0 0 auto}
+  .q .qt{font-size:14.5px}
+  .q .qt b{color:var(--green-d)}
+  .empty{color:var(--muted);font-size:14px;padding:10px 12px}
+
+  pre.sum{background:#f7faf8;border:1px solid var(--line);border-radius:10px;padding:14px;
+    font-size:13px;white-space:pre-wrap;word-break:break-word;
+    font-family:"SF Mono",Menlo,Consolas,monospace;color:#33443c;margin:0}
+  .legend{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.9}
+  .legend code{background:var(--chip);padding:1px 6px;border-radius:5px}
+  details{margin-top:12px}
+  summary{cursor:pointer;color:var(--green-d);font-weight:600;font-size:14px}
+  .disclaimer{font-size:12px;color:var(--muted);text-align:center;margin-top:26px;line-height:1.7}
+  .hide{display:none}
+
+  .tx-chip{display:inline-flex;align-items:center;gap:6px;background:#eef3f0;border:1px solid var(--line);
+    border-radius:20px;padding:6px 14px;font-size:14px;font-weight:600;color:var(--green-d);margin:4px 6px 4px 0}
+  .tx-chip .sub{font-weight:400;font-size:12px;color:var(--muted)}
+  .quote{background:#f7faf8;border-left:3px solid var(--line);border-radius:0 8px 8px 0;
+    padding:6px 10px;margin:5px 0;font-size:13.5px;color:#4a5c53}
+  .quote b{color:var(--green-d)}
+  .cat{margin:10px 0 4px;font-size:14.5px;font-weight:700;color:var(--blue)}
+  .todo{display:flex;gap:9px;padding:8px 10px;border-bottom:1px dashed var(--line);font-size:14.5px;align-items:baseline}
+  .todo:last-child{border-bottom:0}
+  .todo .tag{flex:0 0 auto;font-size:11.5px;background:#f2f6f9;color:var(--blue);
+    border-radius:6px;padding:1px 8px;font-weight:600;white-space:nowrap}
+  .decision{display:inline-block;border-radius:10px;padding:6px 16px;font-weight:700;font-size:15px}
+  .dec-booked{background:#e7efe9;color:#2f5f46}
+  .dec-think{background:#fdf3e3;color:#8a6420}
+  .dec-consult{background:#f2f6f9;color:#4a6d8c}
+  .banner{background:#fdf3e3;border:1px solid #f0e4cd;border-radius:10px;padding:10px 14px;
+    font-size:14px;color:#7a5a1e;margin:10px 0}
+  .banner.blue{background:#f2f6f9;border-color:#dbe5ec;color:#3d5a75}
+  .banner.green{background:#e7efe9;border-color:#cfe0d6;color:#2f5f46}
+
+  .filelist{border:1px solid var(--line);border-radius:10px;margin-top:10px;overflow:hidden}
+  .file{display:flex;gap:10px;align-items:center;padding:9px 12px;border-bottom:1px solid var(--line);
+    cursor:pointer;font-size:14px;background:#fff}
+  .file:last-child{border-bottom:0}
+  .file:hover{background:#f4f8f5}
+  .file .fi{flex:0 0 auto}
+  .file .fn{flex:1 1 auto;font-weight:600;color:var(--green-d);word-break:break-all}
+  .file .fd{flex:0 0 auto;color:var(--muted);font-size:12.5px;white-space:nowrap}
+  .file .ft{flex:0 0 auto;font-size:11.5px;border-radius:6px;padding:1px 8px;font-weight:600}
+  .ft-transcript{background:#e7efe9;color:#2f5f46}
+  .ft-vcss{background:#f2f6f9;color:#4a6d8c}
+  .ft-analysis{background:#fdf3e3;color:#8a6420}
+
+  .dstats{display:flex;gap:12px;flex-wrap:wrap}
+  .dstat{flex:1 1 130px;background:var(--chip);border-radius:12px;padding:11px 14px;text-align:center}
+  .dstat .lab{font-size:12px;color:var(--muted)}
+  .dstat .val{font-size:21px;font-weight:800;color:var(--green-d);margin-top:2px}
+  .dstat .val small{font-size:12px;color:var(--muted);font-weight:600}
+  .ratio{height:10px;border-radius:6px;overflow:hidden;display:flex;margin-top:8px;background:#e2ebe6}
+  .ratio .rd{background:var(--green)}
+  .ratio .rp{background:var(--amber)}
+
+  @media(max-width:600px){
+    th.ev-h,td.ev{display:none}
+    header h1{font-size:21px}
+  }
+  @media print{
+    body{background:#fff}
+    .card{box-shadow:none;border-color:#ccc;break-inside:avoid}
+    #inputCard,.examples,.row,.disclaimer{display:none}
+  }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>門診對話分析器</h1>
+    <div class="sub">貼上（或從 Drive 抓）門診錄音文字稿 → 自動整理評分、治療討論、病人疑慮與待辦 · 富足診所血管醫學</div>
+  </header>
+
+  <!-- 1. 輸入 -->
+  <div class="card" id="inputCard">
+    <h2><span class="n">1</span>錄音文字稿 <span class="hint" style="margin:0">有無「醫師：／病人：」標記都可以，貼上就自動分析</span></h2>
+    <div class="row" style="margin:0 0 10px">
+      <label style="font-size:14.5px;color:var(--green-d);font-weight:600">病歷號</label>
+      <input id="chartNo" type="text" placeholder="填了才能抓 Drive 檔案／上傳統計"
+        style="flex:1;max-width:230px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:14px;font-family:inherit">
+      <button class="btn-ghost" onclick="driveList()">📂 抓 Drive 文字稿</button>
+      <button class="btn-watch" id="watchBtn" onclick="toggleWatch()">👁 自動監看</button>
+      <span class="hint" id="driveListMsg" style="margin:0"></span>
+    </div>
+    <div id="fileList" class="hide"></div>
+    <label style="display:flex;align-items:center;gap:8px;margin:10px 0;font-size:14.5px;cursor:pointer;color:var(--green-d);font-weight:600">
+      <input type="checkbox" id="fuToggle" onchange="toggleFollowUp()" style="width:17px;height:17px">
+      回診病人（貼上上次紀錄 → 重新評分並自動比較）
+    </label>
+    <div id="fuBox" class="hide" style="margin-bottom:12px">
+      <div class="hint" style="margin:0 0 6px">把上次病歷裡的「主訴摘要（含分數）」或完整摘要貼進來；用「📂 抓 Drive 文字稿」時若病人資料夾有上次 VCSS／分析紀錄，會自動帶入：</div>
+      <textarea id="prevText" style="min-height:60px" oninput="prevChanged()" placeholder="例：左小腿靜脈曲張多年，久站後偶有痠脹…。（VCSS 12/30、CEAP C4b、VDS 2）"></textarea>
+    </div>
+    <textarea id="input" placeholder="例：
+醫師：阿姨你好，今天哪裡不舒服？
+病人：我左腳小腿的青筋浮出來好幾年了，站久會痠脹…
+（也可以直接貼沒有標記說話者的整段逐字稿）" oninput="onInputChanged()"></textarea>
+    <div class="examples" id="examples"></div>
+    <div class="row">
+      <button class="btn-go" onclick="run()">分析 →</button>
+      <button class="btn-ghost" onclick="clearAll()">清空</button>
+      <span class="hint" id="autoMsg" style="margin:0"></span>
+    </div>
+    <div class="hint">貼上後約 1 秒自動分析；每一項分數都可下拉覆寫，以臨床判斷為準。純前端運算，文字稿不會離開這台裝置（除非你自己按上傳 Drive）。</div>
+  </div>
+
+  <!-- 2. 對話總覽 -->
+  <div class="card hide" id="overviewCard">
+    <h2><span class="n">2</span>對話總覽</h2>
+    <div class="dstats" id="dstats"></div>
+    <div id="ratioBox" class="hide">
+      <div class="ratio"><div class="rd" id="ratioDoc"></div><div class="rp" id="ratioPat"></div></div>
+      <div class="hint" style="margin-top:4px"><span style="color:var(--green)">■</span> 醫師發言　<span style="color:var(--amber)">■</span> 病人發言</div>
+    </div>
+    <div id="dvtBanner" class="banner hide">⚠ 對話中提到<b>血栓／DVT</b> — 若確認有 DVT 病史，建議另以「VCSS 評分工具」加做 Villalta 血栓後症候群評估。</div>
+    <details id="qaDetails" class="hide">
+      <summary>問答配對（醫師問 → 病人短答，已自動納入評分）</summary>
+      <div id="qaList" style="margin-top:8px"></div>
+    </details>
+  </div>
+
+  <!-- 3. VCSS -->
+  <div class="card hide" id="resultCard">
+    <h2><span class="n">3</span>VCSS 評分（由病人陳述自動解析，十項各 0–3）</h2>
+    <div style="overflow-x:auto">
+    <table id="vcssTable">
+      <thead><tr>
+        <th>項目</th><th style="width:120px">分數</th>
+        <th class="ev-h">命中證據</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+    </div>
+    <div class="totals" style="margin-top:16px">
+      <div class="stat"><div class="lab">VCSS 總分</div>
+        <div class="val"><span id="vcssTotal">0</span><small> / 30</small></div></div>
+      <div class="stat"><div class="lab">嚴重度</div>
+        <div class="val" id="vcssSeverity" style="font-size:22px;padding-top:8px">—</div></div>
+      <div class="stat"><div class="lab">CEAP 臨床分級（推定）</div>
+        <div><span class="ceap-badge" id="ceapBadge">C?</span></div>
+        <div class="hint" id="ceapDesc" style="margin-top:6px"></div></div>
+      <div class="stat"><div class="lab">VDS 靜脈失能</div>
+        <div class="val"><span class="sc" id="vdsChip" style="font-size:20px;min-width:30px">0</span></div>
+        <select id="vdsSelect" onchange="setVDS(this.value)" style="margin-top:6px;max-width:100%;font-size:12.5px">
+          <option value="0">0 — 無症狀</option>
+          <option value="1">1 — 有症狀不需壓力治療</option>
+          <option value="2">2 — 需彈性襪／抬腳維持活動</option>
+          <option value="3">3 — 彈性襪＋抬腳仍受限</option>
+        </select></div>
+    </div>
+    <div class="legend">
+      <code>C0</code> 無 · <code>C1</code> 微血管／網狀 · <code>C2</code> 靜脈曲張 ·
+      <code>C3</code> 水腫 · <code>C4a</code> 色素沉著／濕疹 · <code>C4b</code> 脂性皮膚硬化 ·
+      <code>C5</code> 已癒合潰瘍 · <code>C6</code> 活動性潰瘍。評分只取病人陳述與醫師陳述句，醫師的「問句」不計分，避免問診內容誤判成症狀。
+    </div>
+  </div>
+
+  <!-- Δ 回診比較 -->
+  <div class="card hide" id="compareCard">
+    <h2><span class="n" style="background:var(--blue)">Δ</span>回診比較（上次 → 本次）</h2>
+    <div id="compareBody"></div>
+    <div class="legend">上次分數解析自「回診病人」貼上的紀錄；▼＝分數下降（改善）、▲＝上升（惡化）。</div>
+  </div>
+
+  <!-- 4. 治療討論 -->
+  <div class="card hide" id="txCard">
+    <h2><span class="n">4</span>治療方案討論</h2>
+    <div id="txChips"></div>
+    <div id="feeBox"></div>
+  </div>
+
+  <!-- 5. 病人疑慮 -->
+  <div class="card hide" id="concernCard">
+    <h2><span class="n">5</span>病人疑慮與提問</h2>
+    <div id="concernBody"></div>
+  </div>
+
+  <!-- 6. 醫囑與待辦 -->
+  <div class="card hide" id="todoCard">
+    <h2><span class="n">6</span>醫囑・待辦・追蹤 <span id="decisionBadge"></span></h2>
+    <div id="todoBody"></div>
+  </div>
+
+  <!-- 7. 建議補問 -->
+  <div class="card hide" id="qCard">
+    <h2><span class="n">7</span>建議補問（這次對話沒問到的評分項目）</h2>
+    <div class="qbox" id="qList"></div>
+  </div>
+
+  <!-- 8. 摘要 -->
+  <div class="card hide" id="sumCard">
+    <h2><span class="n">8</span>病歷摘要（一鍵複製）</h2>
+    <div style="margin-bottom:6px">
+      <b style="color:var(--green-d);font-size:14px">主訴摘要（50–100 字，病歷記載用）</b>
+      <span class="hint" id="ccCount" style="margin-left:8px"></span>
+    </div>
+    <textarea id="ccText" style="min-height:74px" oninput="onCCInput()"></textarea>
+    <div class="row" style="margin-top:8px;margin-bottom:16px">
+      <button class="btn-go" onclick="copyCC()">複製主訴</button>
+      <button class="btn-ghost" onclick="regenCC()">↻ 重新產生</button>
+      <span class="hint" id="ccMsg" style="margin:0"></span>
+    </div>
+    <pre class="sum" id="summary"></pre>
+    <div class="row">
+      <button class="btn-go" onclick="copySum()">複製摘要</button>
+      <button class="btn-ghost" onclick="uploadDrive()">☁ 上傳 Drive</button>
+      <span class="hint" id="copyMsg" style="margin:0"></span>
+      <span class="hint" id="driveMsg" style="margin:0"></span>
+    </div>
+  </div>
+
+  <!-- Google Drive 連動設定 -->
+  <div class="card" id="driveCard">
+    <details>
+      <summary>⚙ Google Drive 連動設定（與 VCSS 評分工具共用，每台裝置設定一次）</summary>
+      <div class="hint" style="margin-top:10px">
+        照 <a href="https://github.com/goodlegclinic-collab/clinic-tools#google-drive-連動5-分鐘設定" target="_blank" style="color:var(--green)">README 的五步驟</a>部署 Apps Script 接收器（記得用最新版腳本重新部署），
+        再把網址與密鑰貼進來。已在「VCSS 評分工具」設定過的裝置會自動沿用，不用重填。
+        抓文字稿＝從<strong>你自己 Drive 的病人資料夾</strong>（以病歷號搜尋）讀取 .txt／Google 文件；上傳＝寫入「門診對話分析總表」＋病人資料夾建檔。
+      </div>
+      <div style="margin-top:10px">
+        <input id="gasUrl" type="text" placeholder="Apps Script 網址：https://script.google.com/macros/s/…/exec"
+          style="width:100%;border:1px solid var(--line);border-radius:8px;padding:9px 10px;font-size:13px;font-family:inherit">
+      </div>
+      <div class="row" style="margin-top:8px">
+        <input id="gasToken" type="password" placeholder="密鑰（需與腳本內 TOKEN 一致）"
+          style="flex:1;min-width:180px;border:1px solid var(--line);border-radius:8px;padding:9px 10px;font-size:13px;font-family:inherit">
+        <label style="display:flex;align-items:center;gap:6px;font-size:13.5px;cursor:pointer">
+          <input type="checkbox" id="autoUpload" style="width:15px;height:15px">分析後自動上傳（需已填病歷號）
+        </label>
+        <button class="btn-ghost" onclick="saveDriveCfg()">儲存設定</button>
+        <span class="hint" id="cfgMsg" style="margin:0"></span>
+      </div>
+    </details>
+  </div>
+
+  <div class="disclaimer">
+    本工具以規則式解析門診對話文字稿，評分依 Revised VCSS（2010）、CEAP、VDS 製作，為臨床輔助初稿工具，不取代醫師診斷。<br>
+    所有解析在瀏覽器本機完成；Drive 連動僅存取你自己的 Google 帳號。© 富足診所血管醫學
+  </div>
+</div>
+
+<script>
+/* =====================================================================
+   評分引擎（與 VCSS 評分工具同步：DOMAINS／否定詞／癒合判斷）
+   ===================================================================== */
+const DOMAINS = [
+  {
+    key:"pain", name:"疼痛／不適",
+    rubric:["0 無","1 偶爾、不影響活動、不需止痛藥","2 每日、中度影響活動、偶爾止痛藥","3 每日、明顯限制活動、規律止痛藥"],
+    rules:[
+      {s:3, kw:["天天痛","每天痛","痛到不能","痛到睡不著","一直吃止痛","規律止痛","規律吃止痛","天天吃止痛","無法走","站不住","痛得受不了","痛到受不了","嚴重痠痛","痛到影響"]},
+      {s:2, kw:["每天都痠","每天都脹","每天都會痛","每天都痛","天天都會痛","每天痠","每天脹","天天痠","天天脹","每天都不舒服","影響工作","影響活動","影響上班","要吃止痛","需要止痛","吃止痛藥","止痛藥才"]},
+      {s:1, kw:["站久","走久","久站","久坐","痠脹","脹痛","痠痛","痠麻","沉重","腳很重","悶痛","抽筋","痠一下","微痠","有點不舒服","還會痠","還是痠","有點痠","還會痛","還有點痛","走路會痛","很痛","特別痠","特別痛","會痠","會脹","會痛","痠","脹","痛"]},
+    ],
+    qs:["疼痛是<b>每天</b>還是<b>偶爾</b>？","痛到需要<b>吃止痛藥</b>嗎？頻率？","會<b>影響日常活動／工作</b>嗎？"]
+  },
+  {
+    key:"veins", name:"靜脈曲張",
+    rubric:["0 無","1 少數、散在","2 侷限於小腿或大腿","3 小腿＋大腿都有"],
+    rules:[
+      {s:3, kw:["整條腿都是","大腿到小腿","小腿和大腿","小腿跟大腿","大腿也有","大腿小腿都","蔓延","滿腿","很多條","一堆青筋","一大片青筋","一大片血管"]},
+      {s:2, kw:["一條一條","一條條","浮出","浮起","蚯蚓","凸起","凸出","彎曲的血管","靜脈曲張","青筋凸","青筋浮","血管突出","血管凸","團塊","一整條青筋","蟠曲","有青筋","青筋"]},
+      {s:1, kw:["蜘蛛絲","蜘蛛網","微血管","網狀","細細的血管","細血管","一點點血管","幾條","一兩條","一兩條青筋","少數","散在","一小段"]},
+    ],
+    qs:["曲張血管是在<b>小腿、大腿、還是兩處都有</b>？","是<b>凸出的靜脈曲張</b>還是細的蜘蛛絲／微血管？"]
+  },
+  {
+    key:"edema", name:"靜脈性水腫",
+    rubric:["0 無","1 侷限足與踝","2 踝以上、膝以下","3 到膝或膝以上"],
+    rules:[
+      {s:3, kw:["整條腿腫","腫到膝","膝蓋腫","小腿都腫","腫到大腿"]},
+      {s:2, kw:["小腿腫","腳腫","腫到小腿","脛前腫","按下去凹","水腫","膝蓋以下都腫","膝下都腫"]},
+      {s:1, kw:["腳踝腫","踝腫","腳背腫","下午腫","下午會腫","傍晚腫","傍晚會腫","站久會腫","會腫","有點腫","還是腫","還會腫","還有腫","特別腫","腫脹","浮腫","襪子勒","勒出一圈","勒痕","晚上會腫"]},
+    ],
+    qs:["水腫<b>最高到哪裡</b>（腳踝／小腿／膝蓋以上）？","是<b>下午／久站後才腫、早上消退</b>嗎？"]
+  },
+  {
+    key:"pigment", name:"色素沉著",
+    rubric:["0 無或局部淡","1 侷限踝周","2 瀰漫於小腿下1/3","3 分布高於小腿下1/3"],
+    rules:[
+      {s:3, kw:["整個小腿變","整個小腿黑","整個小腿又黑","小腿大片變色","色素很廣","大範圍變黑","小腿都變咖啡","滿小腿黑"]},
+      {s:2, kw:["小腿變黑","小腿變咖啡","小腿發黑","一片變色","一大片變色","瀰漫","小腿下段變","小腿下段黑"]},
+      {s:1, kw:["咖啡色","變咖啡","變黑","又黑","變深","色素沉","色素","發黑","暗沉","著色","變色","一圈黑","黑一圈","有點黑","還是黑","還有點黑","有點暗"]},
+    ],
+    qs:["皮膚變色<b>範圍多大</b>（只在踝周／小腿下段／更高）？"]
+  },
+  {
+    key:"inflam", name:"發炎（濕疹／潮紅）",
+    rubric:["0 無","1 侷限踝周","2 瀰漫小腿下1/3","3 高於小腿下1/3"],
+    rules:[
+      {s:3, kw:["整片紅腫","大範圍濕疹","小腿都紅"]},
+      {s:2, kw:["一片紅","瀰漫紅","小腿濕疹","滲液"]},
+      {s:1, kw:["癢","濕疹","紅疹","脫皮","泛紅","潮紅","皮膚癢","發炎","起疹","紅腫","會抓","還會癢","還是癢","特別癢"]},
+    ],
+    qs:["皮膚會<b>癢／紅／脫皮（鬱血性濕疹）</b>嗎？範圍多大？"]
+  },
+  {
+    key:"indur", name:"硬化（脂性皮膚硬化）",
+    rubric:["0 無","1 侷限踝周","2 小腿下1/3","3 高於小腿下1/3"],
+    rules:[
+      {s:3, kw:["整段硬","大範圍硬","小腿都硬","整個小腿硬","整個小腿又黑又硬"]},
+      {s:2, kw:["一片硬","小腿變硬","小腿又硬","瀰漫硬化","小腿下段硬"]},
+      {s:1, kw:["硬硬的","變硬","又硬","硬塊","繃緊","皮膚緊","脂性硬化","摸起來硬","硬邦邦","硬梆梆","僵硬","結痂硬","有點硬","還是硬"]},
+    ],
+    qs:["踝上方皮膚摸起來<b>會硬、繃緊（脂性皮膚硬化）</b>嗎？"]
+  },
+  {
+    key:"ulcerN", name:"活動性潰瘍｜數目",
+    rubric:["0 無","1 一個","2 兩個","3 ≥3個"],
+    rules:[
+      {s:3, kw:["三個傷口","好幾個潰瘍","多處潰瘍","多個傷口"]},
+      {s:2, kw:["兩個傷口","兩處潰瘍","2個傷口"]},
+      {s:1, kw:["有傷口","潰瘍","破皮沒好","爛一個洞","傷口沒好","傷口還沒好","開放性傷口","流湯","化膿的傷口","一個傷口","潰爛","又破","破了一個","破一個","破了個洞","破洞"]},
+    ],
+    qs:["目前有<b>幾個沒癒合的傷口／潰瘍</b>？"],
+    ulcer:true
+  },
+  {
+    key:"ulcerT", name:"活動性潰瘍｜持續時間",
+    rubric:["0 無","1 <3個月","2 3–12個月","3 >12個月"],
+    rules:[
+      {s:3, kw:["好幾年沒好","一年多沒好","一年多都沒好","一年多","超過一年","一直沒好","都沒好","很久都沒好","很久沒好","拖很久","兩年了","好幾年"]},
+      {s:2, kw:["幾個月沒好","半年沒好","三四個月","好幾個月","幾個月了"]},
+      {s:1, kw:["最近破","前陣子破","這幾週","這幾天","剛破","新的傷口","前幾天破"]},
+    ],
+    qs:["若有潰瘍，<b>持續多久沒癒合</b>？（<3月／3–12月／>1年）"],
+    ulcer:true
+  },
+  {
+    key:"ulcerS", name:"活動性潰瘍｜大小",
+    rubric:["0 無","1 <2cm","2 2–6cm","3 >6cm"],
+    rules:[
+      {s:3, kw:["很大一個洞","比硬幣大很多","一大片潰瘍","超過六公分","巴掌大"]},
+      {s:2, kw:["硬幣大","兩三公分","銅板大","中等傷口"]},
+      {s:1, kw:["小傷口","小破洞","一點點破","小小的潰瘍"]},
+    ],
+    qs:["若有潰瘍，<b>最大直徑約幾公分</b>？"],
+    ulcer:true
+  },
+  {
+    key:"comp", name:"壓力治療使用",
+    rubric:["0 未使用","1 間歇使用","2 多數日子使用","3 完全遵從使用"],
+    rules:[
+      {s:3, kw:["每天穿彈性襪","每天都穿","每天都有穿","天天穿","天天都穿","規律穿","一直都穿","都有穿彈性襪","都有穿","完全遵從"]},
+      {s:2, kw:["常穿彈性襪","經常穿","大部分時間穿","多數時候穿","多數日子"]},
+      {s:1, kw:["偶爾穿彈性襪","偶爾穿","有時穿","買了彈性襪","有在穿","穿過彈性襪","穿彈性襪","穿壓力襪","彈性襪","壓力襪"]},
+    ],
+    qs:["有<b>穿彈性襪／使用壓力治療</b>嗎？頻率？（未用／間歇／幾乎每天／完全遵從）"]
+  },
+];
+const NEG = ["不","沒","未","無","否認"];
+const HEALED = ["好了","癒合","痊癒","結疤","收口","好起來","已經好","早就好"];
+const NOT_HEALED = ["沒好","沒有好","還沒好","一直沒好","都沒好"];
+
+function normalize(s){
+  return s.replace(/\s+/g," ").replace(/，|、|；|。|\n/g," ").toLowerCase();
+}
+function scoreDomain(d, text){
+  for(const rule of d.rules){
+    for(const kw of rule.kw){
+      const low = kw.toLowerCase();
+      let from = 0, idx;
+      while((idx = text.indexOf(low, from)) >= 0){
+        from = idx + low.length;
+        if(isNegated(text, idx)) continue;
+        if(d.ulcer && isHealed(text, idx, low.length)) continue;
+        if((d.key==="pigment"||d.key==="indur") && isTreatmentSite(text, idx)) continue;
+        // 「以前每天痠脹」是病史不是現況（回診對話常見），疼痛／水腫跳過過去式描述
+        if((d.key==="pain"||d.key==="edema") && isPastMention(text, idx)) continue;
+        return {dom:d, score:rule.s, hit:kw, auto:true};
+      }
+    }
+  }
+  return {dom:d, score:0, hit:null, auto:false};
+}
+function gateUlcer(results, text){
+  const byKey = {};
+  results.forEach(r=> byKey[r.dom.key]=r);
+  let hasUlcer = byKey.ulcerN.score>0;
+  if(!hasUlcer && (byKey.ulcerT.score>0 || byKey.ulcerS.score>0)
+     && /傷口|潰瘍|破|洞|流湯|化膿|潰爛/.test(text)
+     && NOT_HEALED.some(n=> text.includes(n))){
+    byKey.ulcerN.score=1; byKey.ulcerN.hit=byKey.ulcerT.hit||byKey.ulcerS.hit; byKey.ulcerN.auto=true;
+    hasUlcer=true;
+  }
+  if(!hasUlcer){
+    ["ulcerT","ulcerS"].forEach(k=>{ byKey[k].score=0; byKey[k].hit=null; byKey[k].auto=false; });
+  }
+}
+function isTreatmentSite(text, idx){
+  const before = text.slice(Math.max(0,idx-16), idx);
+  return /硬化劑|雷射|注射|打完|打針|術後|手術後|治療的地方|打的地方/.test(before);
+}
+function fixComp(results, text){
+  const comp = results.find(r=>r.dom.key==="comp");
+  if(comp.score>0 && /(但|可是|不過|其實)[^。]{0,6}沒(有)?(在)?穿|都沒穿|沒在穿|從來沒穿|買了沒穿|買了都沒/.test(text)){
+    comp.score=0; comp.hit=null; comp.auto=false;
+  }
+}
+function isNegated(text, idx){
+  const win = text.slice(Math.max(0,idx-3), idx);
+  return NEG.some(n=> win.includes(n));
+}
+function isPastMention(text, idx){
+  const win = text.slice(Math.max(0,idx-6), idx);
+  return /以前|之前|過去|原本|本來|術前|開刀前/.test(win);
+}
+function isHealed(text, idx, len){
+  const after = text.slice(idx, idx+len+6);
+  if(NOT_HEALED.some(n=> after.includes(n))) return false;
+  return HEALED.some(h=> after.includes(h));
+}
+
+/* =====================================================================
+   對話解析：說話者標記、時間戳、句子切分、問句判斷
+   ===================================================================== */
+const DOC_LABEL = /^(?:醫師|醫生|楊醫師|楊院長|院長|主任|Dr\.?|Doctor)\s*[:：]/i;
+const PAT_LABEL = /^(?:病人|病患|患者|家屬|阿姨|先生|太太|小姐|Patient|Pt\.?)\s*[:：]/i;
+const GEN_LABEL = /^((?:speaker|說話者|發言人|講者|與會者|[SP])\s*[A-Za-z0-9１２３一二三]{1,2})\s*[:：]/i;
+const TS_RE = /\[?\(?\d{1,2}:\d{2}(?::\d{2})?(?:\.\d+)?\)?\]?/g;
+
+function isQuestionSentence(s){
+  const t = s.trim().replace(/[」』"]+$/,"");
+  if(!t) return false;
+  if(/[？?]$/.test(t)) return true;
+  if(/(嗎|呢|吧)[。.!！]?$/.test(t)) return true;
+  if(/(會不會|有沒有|是不是|多不多|痛不痛|腫不腫|癢不癢|還是說|哪一?[隻個邊種側])/.test(t) && t.length<40) return true;
+  return false;
+}
+function splitSentences(text){
+  const first = text.split(/(?<=[。！？!?；;\n])|(?=\n)/).map(s=>s.trim()).filter(Boolean);
+  // ASR 逐字稿常無標點、以空白分段：長句再依空白細切，才能辨識問答
+  const out = [];
+  first.forEach(chunk=>{
+    if(chunk.length>20 && /\s/.test(chunk) && !/[。！？!?；;]/.test(chunk.slice(0,-1))){
+      chunk.split(/\s+/).forEach(p=>{ if(p.trim()) out.push(p.trim()); });
+    } else out.push(chunk);
+  });
+  return out;
+}
+
+/* 逐行解析 → turns：[{role:'doc'|'pat'|null, text}] */
+function parseDialogue(raw){
+  const lines = raw.replace(TS_RE," ").split(/\n/).map(l=>l.trim()).filter(Boolean);
+  const turns = [];
+  const genMap = {};      // 一般標記（Speaker 1）→ 統計後指派角色
+  let hasExplicit = false, hasGeneric = false;
+
+  for(const line of lines){
+    let m;
+    if(DOC_LABEL.test(line)){
+      hasExplicit = true;
+      turns.push({role:"doc", text: line.replace(DOC_LABEL,"").trim()});
+    } else if(PAT_LABEL.test(line)){
+      hasExplicit = true;
+      turns.push({role:"pat", text: line.replace(PAT_LABEL,"").trim()});
+    } else if((m = line.match(GEN_LABEL))){
+      hasGeneric = true;
+      const key = m[1].toLowerCase().replace(/\s+/g,"");
+      genMap[key] = genMap[key]||{q:0, med:0, chars:0};
+      turns.push({role:"gen:"+key, text: line.replace(GEN_LABEL,"").trim()});
+    } else if(turns.length && !hasExplicit && !hasGeneric){
+      turns.push({role:null, text:line});
+    } else if(turns.length){
+      turns[turns.length-1].text += " "+line;   // 續行併回上一個發言
+    } else {
+      turns.push({role:null, text:line});
+    }
+  }
+
+  // 一般標記：問句多＋醫療詞多的一方 → 醫師
+  if(hasGeneric){
+    const MED = /超音波|逆流|靜脈|評分|建議|安排|治療|手術|麻醉|檢查|報告|診斷|藥|導管|消融|膠水|硬化劑/g;
+    turns.forEach(t=>{
+      if(!t.role || !t.role.startsWith("gen:")) return;
+      const g = genMap[t.role.slice(4)];
+      splitSentences(t.text).forEach(s=>{ if(isQuestionSentence(s)) g.q++; });
+      g.med += (t.text.match(MED)||[]).length;
+      g.chars += t.text.length;
+    });
+    const keys = Object.keys(genMap);
+    if(keys.length >= 2){
+      const ranked = keys.slice().sort((a,b)=> (genMap[b].q*2+genMap[b].med) - (genMap[a].q*2+genMap[a].med));
+      const docKey = ranked[0];
+      turns.forEach(t=>{
+        if(t.role && t.role.startsWith("gen:")) t.role = (t.role.slice(4)===docKey) ? "doc" : "pat";
+      });
+    } else {
+      turns.forEach(t=>{ if(t.role && t.role.startsWith("gen:")) t.role = null; });
+      hasGeneric = false;
+    }
+  }
+
+  const hasSpeakers = hasExplicit || hasGeneric;
+  return {turns, hasSpeakers};
+}
+
+/* 可評分文字＋問答配對：
+   - 有標記：病人全部發言＋醫師「陳述句」；醫師問句→病人短答的配對另外補證據
+   - 無標記：全部句子扣掉問句；問句→下一句短答同樣配對 */
+const AFFIRM_RE = /^(嗯+|對+|是+|會+|有+|對啊|對呀|對阿|有啊|有喔|有阿|會啊|會喔|會阿|是啊|是阿|沒錯|蠻常|滿常|常常|很常|每天|天天|偶爾|有時)/;
+const DENY_RE = /^(不會|沒有|沒|不用|不常|很少|從來沒|否)/;
+
+function buildScorable(parsed, raw){
+  const pieces = [];
+  const qaPairs = [];
+  const flat = [];   // {role, sentence}
+
+  if(parsed.hasSpeakers){
+    parsed.turns.forEach(t=>{
+      splitSentences(t.text).forEach(s=> flat.push({role:t.role, s}));
+    });
+  } else {
+    splitSentences(raw.replace(TS_RE," ")).forEach(s=> flat.push({role:null, s}));
+  }
+
+  for(let i=0;i<flat.length;i++){
+    const {role, s} = flat[i];
+    const isQ = isQuestionSentence(s);
+    const clean = s.replace(/[。；;，,]+$/,"");
+    if(role==="pat"){ pieces.push(clean); }
+    else if(role==="doc"){ if(!isQ) pieces.push(clean); }
+    else { if(!isQ) pieces.push(clean); }
+
+    // 問答配對：問句（醫師或無標記）→ 下一句是「病人／無標記」短答
+    if(isQ && role!=="pat"){
+      const nxt = flat[i+1];
+      if(nxt && nxt.role!=="doc"){
+        const a = nxt.s.trim().replace(/[。.!！~～]+$/,"");
+        if(a.length<=12 && !isQuestionSentence(a)){
+          if(AFFIRM_RE.test(a) && !DENY_RE.test(a)){
+            const matched = matchQuestionDomains(s);
+            matched.forEach(mt=> qaPairs.push({...mt, q:s, a:nxt.s}));
+          }
+        }
+      }
+    }
+  }
+  return {scorable: pieces.join("，"), qaPairs, flat};
+}
+
+/* 問句裡出現哪些評分關鍵字（問句不做否定判斷：「會不會痛」也算問到疼痛） */
+function matchQuestionDomains(q){
+  const low = normalize(q);
+  const out = [];
+  for(const d of DOMAINS){
+    if(d.ulcer && d.key!=="ulcerN") continue;   // 潰瘍細節不從問答配對給分
+    for(const rule of d.rules){
+      const kw = rule.kw.find(k=> low.includes(k.toLowerCase()));
+      if(kw){ out.push({key:d.key, kw, s:rule.s}); break; }
+    }
+  }
+  // 問診常用「不完整關鍵詞」補判（單字問法）
+  if(!out.some(o=>o.key==="pain") && /痠|痛|脹|不舒服/.test(low)) out.push({key:"pain", kw:"痠痛（問答）", s:1});
+  if(!out.some(o=>o.key==="edema") && /腫/.test(low)) out.push({key:"edema", kw:"腫（問答）", s:1});
+  if(!out.some(o=>o.key==="comp") && /彈性襪|壓力襪/.test(low)) out.push({key:"comp", kw:"彈性襪（問答）", s:1});
+  return out;
+}
+
+/* 問答配對補分：該項原本 0 分才補，且短答有「每天／影響工作」可升級疼痛 */
+function applyQaPairs(results, qaPairs){
+  const byKey = {}; results.forEach(r=> byKey[r.dom.key]=r);
+  const used = [];
+  qaPairs.forEach(p=>{
+    const r = byKey[p.key];
+    if(!r) return;
+    let s = Math.min(p.s, 1);          // 問答配對保守給 1 分起
+    if(p.key==="pain" && /每天|天天|影響工作|影響上班/.test(p.q+p.a)) s = 2;
+    if(p.key==="comp" && /每天|天天/.test(p.a)) s = 3;
+    if(r.score < s){
+      r.score = s; r.auto = true; r.qa = true;
+      r.hit = p.kw.replace("（問答）","");
+      r.qaQuote = p.q+" → "+p.a;
+      used.push(p);
+    } else if(r.score===0){
+      r.score = s; r.auto = true; r.qa = true; r.hit = p.kw; r.qaQuote = p.q+" → "+p.a;
+      used.push(p);
+    }
+  });
+  return used;
+}
+
+/* =====================================================================
+   對話層分析：治療討論／費用／病人疑慮／醫囑待辦／決策狀態
+   ===================================================================== */
+const TREATMENTS = [
+  {key:"emwa", name:"低溫微波消融（EMWA）", kw:["微波","emwa","低溫微波"]},
+  {key:"evla", name:"雷射消融手術（EVLA）", kw:["雷射消融","雷射燒","雷射封","導管雷射","evla","雷射手術","雷射微創"]},
+  {key:"ufla", name:"超微雷射 UFLA", kw:["ufla","超微雷射"]},
+  {key:"glue", name:"Venaseal 超級膠水", kw:["膠水","venaseal","黏合手術","黏合治療","黏起來"]},
+  {key:"scle", name:"硬化劑注射", kw:["硬化劑","泡沫注射","微針注射","打針把血絲"]},
+  {key:"phle", name:"迷你靜脈瘤鉤除", kw:["鉤除","勾除","muller","小切口"]},
+  {key:"sock", name:"彈性襪／保守治療", kw:["彈性襪","壓力襪","保守治療"]},
+  {key:"dfpp", name:"DFPP 血液淨化", kw:["dfpp","血液淨化","血漿置換","洗血","雙重過濾","血漿廓清"]},
+  {key:"hbot", name:"高壓氧", kw:["高壓氧","氧艙","hbot"]},
+  {key:"ilib", name:"ILIB 靜脈雷射", kw:["靜脈雷射","ilib","半導體雷射"]},
+  {key:"iv",   name:"點滴保養", kw:["點滴","營養針","針劑保養"]},
+  {key:"us",   name:"血管超音波檢查", kw:["超音波","都卜勒","doppler"]},
+];
+function detectTreatments(rawLow, rawOrig){
+  const found = [];
+  TREATMENTS.forEach(t=>{
+    for(const kw of t.kw){
+      const idx = rawLow.indexOf(kw.toLowerCase());
+      if(idx>=0){
+        found.push({name:t.name, kw, quote: excerpt(rawOrig, kw)});
+        return;
+      }
+    }
+  });
+  // 「雷射」單獨出現但沒對到任何雷射類 → 標為未指明
+  if(rawLow.includes("雷射") && !found.some(f=>/雷射/.test(f.name))){
+    found.push({name:"雷射（種類未指明）", kw:"雷射", quote: excerpt(rawOrig,"雷射")});
+  }
+  return found;
+}
+function detectFees(raw){
+  const out = [];
+  const re = /(\d+(?:\.\d+)?\s*萬(?:\s*[0-9千百多幾]+)?|\d{1,3}(?:,\d{3})+\s*(?:元|塊)?|\d{4,6}\s*(?:元|塊))/g;
+  let m;
+  while((m = re.exec(raw)) !== null && out.length<6){
+    const i = m.index;
+    if(/年|歲|公分|cc|ml|分鐘|次|%|度/.test(raw.slice(i+m[0].length, i+m[0].length+2))) continue; // 排除非金額
+    const start = Math.max(0,i-16), end = Math.min(raw.length, i+m[0].length+12);
+    const ctx = (start>0?"…":"")+raw.slice(start,end).replace(/\n/g," ")+(end<raw.length?"…":"");
+    out.push({amount:m[0].replace(/\s+/g,""), ctx});
+  }
+  return out;
+}
+const CONCERNS = [
+  {key:"cost",  name:"費用",           kw:["多少錢","費用","價格","價錢","幾萬","太貴","好貴","很貴","分期","刷卡","要付"]},
+  {key:"ins",   name:"保險／健保",     kw:["健保","保險","給付","實支實付","理賠","診斷書"]},
+  {key:"pain",  name:"怕痛／麻醉",     kw:["會不會痛","痛不痛","會很痛","麻醉","怕痛","打針會痛","很怕痛"]},
+  {key:"recov", name:"恢復期／生活",   kw:["恢復","多久能","多久可以","能不能上班","上班","工作嗎","走路嗎","開車","運動","請假","住院","當天回","隔天"]},
+  {key:"eff",   name:"效果／復發／風險", kw:["復發","會不會再","有效嗎","效果","成功率","後遺症","副作用","風險","安全嗎","失敗"]},
+  {key:"sched", name:"時程安排",       kw:["什麼時候可以","最快什麼","要等多久","排到什麼"]},
+];
+const INTAKE_Q_RE = /痛|痠|脹|腫|癢|皮膚|變黑|變化|傷口|潰瘍|彈性襪|血栓|哪裡不舒服|影響工作|怎麼樣|多久了/;
+function detectConcerns(flat, hasSpeakers){
+  const bag = {};      // key → {name, quotes:[]}
+  const srcSentences = flat
+    .filter(f=> hasSpeakers ? f.role==="pat"
+      : !(isQuestionSentence(f.s) && INTAKE_Q_RE.test(f.s)))   // 無標記：問診型問句多半是醫師問的
+    .map(f=>f.s);
+  srcSentences.forEach(s=>{
+    const low = s.toLowerCase();
+    const quote = s.length>60 ? s.slice(0,60)+"…" : s;
+    CONCERNS.forEach(c=>{
+      if(c.kw.some(k=> low.includes(k.toLowerCase()))){
+        bag[c.key] = bag[c.key] || {name:c.name, quotes:[]};
+        if(bag[c.key].quotes.length<3 && !bag[c.key].quotes.includes(quote)) bag[c.key].quotes.push(quote);
+      }
+    });
+  });
+  // 其他問句（沒被歸類的病人提問）
+  const misc = [];
+  srcSentences.forEach(s=>{
+    if(!isQuestionSentence(s)) return;
+    const low = s.toLowerCase();
+    if(CONCERNS.some(c=> c.kw.some(k=> low.includes(k.toLowerCase())))) return;
+    if(s.length>=6 && misc.length<3) misc.push(s);
+  });
+  return {cats: Object.values(bag), misc};
+}
+const ORDER_RULES = [
+  {tag:"回診追蹤", re:/(星期|禮拜|週|周|月|天|號)[^。？?]{0,12}?(回診|回來|再來|複診|追蹤|看報告)|(回診|回來|再來|複診|追蹤)[^。？?]{0,10}(看報告|檢查)/},
+  {tag:"安排檢查／手術", re:/(安排|預約|幫你排|排一個|先排)[^。？?]{0,14}(超音波|檢查|手術|抽血|報告|時間|日期)/},
+  {tag:"彈性襪", re:/(穿彈性襪|彈性襪[^。？?]{0,8}(穿|戴))/, not:/不想穿|不用穿|沒(有)?穿|穿不住|也有|可以選/},
+  {tag:"用藥", re:/(開|吃|擦|抹)[^。？?]{0,8}(藥|藥膏|止痛|消炎)|藥[^。？?]{0,6}(一天|早晚|飯後)/},
+  {tag:"傷口照顧", re:/(傷口|換藥|紗布|敷料)[^。？?]{0,12}(照顧|清潔|換|保持)/},
+  {tag:"生活衛教", re:/(抬腳|抬高|避免久站|不要站太久|多走動|體重|運動)/},
+  {tag:"術前準備", re:/(術前|開刀前|手術前|禁食|停藥|同意書)/},
+];
+function detectOrders(flat, hasSpeakers){
+  const src = flat.filter(f=> hasSpeakers ? f.role==="doc" : true).map(f=>f.s);
+  const out = [];
+  src.forEach(s=>{
+    if(isQuestionSentence(s)) return;
+    for(const r of ORDER_RULES){
+      if(r.re.test(s) && !(r.not && r.not.test(s))){
+        if(!out.some(o=>o.s===s)) out.push({tag:r.tag, s});
+        break;
+      }
+    }
+  });
+  return out.slice(0,8);
+}
+function detectDecision(rawLow){
+  if(/(就|先|幫你|那我們)(約|排)[^。]{0,10}(手術|時間|日期)|訂金|簽同意書|確定要做|決定要做|就這樣約/.test(rawLow))
+    return {key:"booked", label:"✅ 已約定治療／手術", cls:"dec-booked"};
+  if(/回去(考慮|想)|考慮(一下|看看)|想一下|跟家人|問家人|和家人|商量|討論一下|再想想|不急|下次再/.test(rawLow))
+    return {key:"think", label:"🤔 考慮中（回去討論）", cls:"dec-think"};
+  return {key:"consult", label:"💬 諮詢／追蹤", cls:"dec-consult"};
+}
+function excerpt(raw, kw){
+  const re = new RegExp(kw.replace(/[.*+?^${}()|[\]\\]/g,"\\$&"),"i");
+  const m = raw.match(re);
+  if(!m) return "";
+  const i = raw.indexOf(m[0]);
+  const start = Math.max(0, i-14), end = Math.min(raw.length, i+m[0].length+18);
+  return (start>0?"…":"")+raw.slice(start,end).replace(/\n/g," ")+(end<raw.length?"…":"");
+}
+
+/* =====================================================================
+   主流程
+   ===================================================================== */
+let LAST = null;
+let autoTimer = null;
+
+function onInputChanged(){
+  clearTimeout(autoTimer);
+  const v = document.getElementById("input").value.trim();
+  if(v.length < 40) return;
+  document.getElementById("autoMsg").textContent = "⏳ 即將自動分析…";
+  autoTimer = setTimeout(()=>{ document.getElementById("autoMsg").textContent=""; run(); }, 1000);
+}
+
+function run(){
+  const raw = document.getElementById("input").value.trim();
+  if(!raw){ alert("請先貼上門診錄音文字稿"); return; }
+
+  const parsed = parseDialogue(raw);
+  const {scorable, qaPairs, flat} = buildScorable(parsed, raw);
+  const text = normalize(scorable);
+  const rawLow = raw.toLowerCase();
+
+  FOLLOWUP.prev = FOLLOWUP.on ? parsePrev(document.getElementById("prevText").value) : null;
+
+  const results = DOMAINS.map(d => scoreDomain(d, text));
+  gateUlcer(results, text);
+  fixComp(results, text);
+  const usedQa = applyQaPairs(results, qaPairs);
+
+  LAST = {
+    fullRaw: raw,
+    raw: scorable,          // 主訴摘要／證據反白以「可評分文字」為準，避開醫師問句
+    parsed, flat, results,
+    qa: usedQa,
+    vds: null,
+    treatments: detectTreatments(rawLow, raw),
+    fees: detectFees(raw),
+    concerns: detectConcerns(flat, parsed.hasSpeakers),
+    orders: detectOrders(flat, parsed.hasSpeakers),
+    decision: detectDecision(rawLow),
+    dvt: /血栓|dvt|栓塞/.test(rawLow) && !/沒有?血栓|無血栓/.test(rawLow),
+  };
+
+  renderOverview();
+  renderTable(results);
+  renderTotals(results);
+  initVDS(results, text);
+  renderTx();
+  renderConcerns();
+  renderTodos();
+  LAST.cc = genCC(); LAST.ccManual = false;
+  renderQuestions(results);
+  renderSummary();
+  paintCC();
+
+  ["overviewCard","resultCard","txCard","concernCard","todoCard","qCard","sumCard"]
+    .forEach(id=>document.getElementById(id).classList.remove("hide"));
+  if(FOLLOWUP.on && FOLLOWUP.prev){ renderCompare(); document.getElementById("compareCard").classList.remove("hide"); }
+  else document.getElementById("compareCard").classList.add("hide");
+
+  if(driveCfg().auto && driveCfg().url && document.getElementById("chartNo").value.trim()) uploadDrive();
+  document.getElementById("overviewCard").scrollIntoView({behavior:"smooth",block:"start"});
+}
+
+/* ---------- 對話總覽 ---------- */
+function renderOverview(){
+  const p = LAST.parsed;
+  const chars = t => t.replace(/\s/g,"").length;
+  let docCh=0, patCh=0, patQ=0, docQ=0;
+  LAST.flat.forEach(f=>{
+    if(f.role==="doc"){ docCh+=chars(f.s); if(isQuestionSentence(f.s)) docQ++; }
+    else if(f.role==="pat"){ patCh+=chars(f.s); if(isQuestionSentence(f.s)) patQ++; }
+    else if(isQuestionSentence(f.s)) docQ++;   // 無標記時問句多半是醫師問診
+  });
+  const total = chars(LAST.fullRaw);
+  const stats = [
+    {lab:"總字數", val:total, unit:"字"},
+    {lab:"說話者標記", val:p.hasSpeakers?"已辨識":"無", unit:""},
+    {lab:"問診提問", val:docQ, unit:"句"},
+    {lab:"病人提問", val:patQ, unit:"句"},
+    {lab:"問答配對計分", val:LAST.qa.length, unit:"組"},
+  ];
+  document.getElementById("dstats").innerHTML = stats.map(s=>
+    `<div class="dstat"><div class="lab">${s.lab}</div><div class="val">${s.val}<small>${s.unit}</small></div></div>`).join("");
+
+  const rb = document.getElementById("ratioBox");
+  if(p.hasSpeakers && (docCh+patCh)>0){
+    rb.classList.remove("hide");
+    document.getElementById("ratioDoc").style.width = Math.round(docCh/(docCh+patCh)*100)+"%";
+    document.getElementById("ratioPat").style.width = (100-Math.round(docCh/(docCh+patCh)*100))+"%";
+  } else rb.classList.add("hide");
+
+  document.getElementById("dvtBanner").classList.toggle("hide", !LAST.dvt);
+
+  const qd = document.getElementById("qaDetails");
+  if(LAST.qa.length){
+    qd.classList.remove("hide");
+    document.getElementById("qaList").innerHTML = LAST.qa.map(q=>
+      `<div class="quote"><b>〔${DOMAINS.find(d=>d.key===q.key).name}〕</b> ${esc(q.q)} → <b>${esc(q.a)}</b></div>`).join("");
+  } else qd.classList.add("hide");
+}
+
+/* ---------- VCSS 表格（同評分工具） ---------- */
+function renderTable(results){
+  const tb = document.querySelector("#vcssTable tbody");
+  tb.innerHTML = "";
+  results.forEach((r,i)=>{
+    const tr = document.createElement("tr");
+    if(r.auto) tr.className="auto";
+    const opts = [0,1,2,3].map(v=>
+      `<option value="${v}" ${v===r.score?"selected":""}>${v} — ${r.dom.rubric[v].replace(/^\d+\s/,"")}</option>`).join("");
+    const evidence = r.qa
+      ? `<span class="flag">問答配對</span> ${esc(r.qaQuote||"")}`
+      : r.hit
+        ? highlightEvidence(LAST.raw, r.hit)
+        : `<span style="color:#b9c6bf">未在對話中偵測到　<span class="flag">建議補問</span></span>`;
+    tr.innerHTML = `
+      <td class="dom">${r.dom.name}</td>
+      <td>
+        <span class="sc sc${r.score}" id="chip-${i}">${r.score}</span>
+        <select onchange="override(${i}, this.value)" style="margin-left:8px">${opts}</select>
+      </td>
+      <td class="ev">${evidence}</td>`;
+    tb.appendChild(tr);
+  });
+}
+function highlightEvidence(raw, hit){
+  const re = new RegExp(hit.replace(/[.*+?^${}()|[\]\\]/g,"\\$&"),"i");
+  const m = raw.match(re);
+  if(!m) return `命中：<mark>${esc(hit)}</mark>`;
+  const i = raw.indexOf(m[0]);
+  const start = Math.max(0, i-10), end = Math.min(raw.length, i+m[0].length+10);
+  let seg = esc(raw.slice(start,end));
+  seg = seg.replace(new RegExp(esc(m[0]).replace(/[.*+?^${}()|[\]\\]/g,"\\$&"),"i"), `<mark>${esc(m[0])}</mark>`);
+  return (start>0?"…":"")+seg+(end<raw.length?"…":"");
+}
+function override(i, v){
+  LAST.results[i].score = parseInt(v,10);
+  LAST.results[i].manual = true;
+  const chip = document.getElementById("chip-"+i);
+  chip.textContent = v; chip.className = "sc sc"+v;
+  renderTotals(LAST.results);
+  renderQuestions(LAST.results);
+  refreshCC();
+  renderSummary();
+}
+function renderTotals(results){
+  const total = results.reduce((a,r)=>a+r.score,0);
+  document.getElementById("vcssTotal").textContent = total;
+  document.getElementById("vcssSeverity").textContent = sevText(total);
+  const ceap = deriveCEAP(results);
+  document.getElementById("ceapBadge").textContent = ceap.c;
+  document.getElementById("ceapDesc").textContent = ceap.desc;
+}
+function deriveCEAP(results){
+  const by = {};
+  results.forEach(r=> by[r.dom.key]=r.score);
+  const raw = LAST?.raw||"";
+  const hasUlcerActive = by.ulcerN>0 || by.ulcerT>0 || by.ulcerS>0;
+  const healedUlcer = /傷口|潰瘍|破/.test(raw) && (HEALED.some(h=>raw.includes(h)) || /之前.*傷口|以前破/.test(raw));
+  const vr = results.find(r=>r.dom.key==="veins");
+  const spiderHit = !!(vr && vr.hit && /蜘蛛|微血管|網狀|細/.test(vr.hit));
+  const c4b = by.indur>0;
+  const c4a = by.pigment>0 || by.inflam>0;
+  const c3  = by.edema>0;
+  const c2  = by.veins>=2 || (by.veins===1 && !spiderHit);
+  const c1  = spiderHit || (!by.veins && /蜘蛛|微血管|網狀|細.*血管/.test(raw));
+  if(hasUlcerActive) return {c:"C6", desc:"活動性靜脈性潰瘍"};
+  if(healedUlcer && !hasUlcerActive) return {c:"C5", desc:"已癒合之靜脈性潰瘍"};
+  if(c4b) return {c:"C4b", desc:"脂性皮膚硬化／白色萎縮"};
+  if(c4a) return {c:"C4a", desc:"色素沉著／鬱血性濕疹"};
+  if(c3)  return {c:"C3", desc:"靜脈性水腫"};
+  if(c2)  return {c:"C2", desc:"靜脈曲張（管徑 ≥3mm）"};
+  if(c1)  return {c:"C1", desc:"微血管擴張／網狀靜脈"};
+  return {c:"C0", desc:"無可見或可觸及之靜脈疾病徵象"};
+}
+
+/* ---------- VDS ---------- */
+const VDS_RULES = [
+  {s:3, kw:["躺著","臥床","下不了床","完全無法","走不動","無法工作","不能工作","無法站","抬腳也沒用","抬腳還是"]},
+  {s:2, kw:["要穿彈性襪才能","靠彈性襪","要抬腳","抬高才","需要休息才","撐不了","要坐下來休息","影響工作","影響上班","做不了家事"]},
+  {s:1, kw:["會痠","會脹","會痛","痠脹","不舒服","站久","痠痛","沉重"]},
+];
+function initVDS(results, text){
+  let best = {s:0, hit:null};
+  for(const rule of VDS_RULES){
+    for(const kw of rule.kw){
+      const idx = text.indexOf(kw);
+      if(idx>=0 && !isNegated(text, idx)){ best = {s:rule.s, hit:kw}; break; }
+    }
+    if(best.s) break;
+  }
+  LAST.vds = {score:best.s, hit:best.hit, manual:false};
+  document.getElementById("vdsSelect").value = best.s;
+  paintVDS();
+}
+function setVDS(v){ LAST.vds.score=parseInt(v,10); LAST.vds.manual=true; paintVDS(); refreshCC(); renderSummary(); }
+function paintVDS(){
+  const chip = document.getElementById("vdsChip");
+  chip.textContent = LAST.vds.score; chip.className = "sc sc"+LAST.vds.score;
+}
+
+/* ---------- 治療討論／疑慮／待辦 ---------- */
+function renderTx(){
+  const el = document.getElementById("txChips");
+  if(!LAST.treatments.length){
+    el.innerHTML = `<div class="empty">對話中未偵測到治療方案討論。</div>`;
+  } else {
+    el.innerHTML = LAST.treatments.map(t=>
+      `<span class="tx-chip">${esc(t.name)}<span class="sub">${esc(t.quote)}</span></span>`).join("");
+  }
+  const fb = document.getElementById("feeBox");
+  fb.innerHTML = LAST.fees.length
+    ? `<div class="cat">費用討論</div>`+LAST.fees.map(f=>`<div class="quote"><b>${esc(f.amount)}</b>　${esc(f.ctx)}</div>`).join("")
+    : "";
+}
+function renderConcerns(){
+  const el = document.getElementById("concernBody");
+  const {cats, misc} = LAST.concerns;
+  if(!cats.length && !misc.length){
+    el.innerHTML = `<div class="empty">未偵測到明顯的病人疑慮或提問。</div>`;
+    return;
+  }
+  let html = cats.map(c=>
+    `<div class="cat">${esc(c.name)}</div>`+c.quotes.map(q=>`<div class="quote">「${esc(q)}」</div>`).join("")).join("");
+  if(misc.length) html += `<div class="cat">其他提問</div>`+misc.map(q=>`<div class="quote">「${esc(q)}」</div>`).join("");
+  el.innerHTML = html;
+}
+function renderTodos(){
+  document.getElementById("decisionBadge").innerHTML =
+    `<span class="decision ${LAST.decision.cls}" style="margin-left:auto;font-size:13.5px">${LAST.decision.label}</span>`;
+  const el = document.getElementById("todoBody");
+  el.innerHTML = LAST.orders.length
+    ? LAST.orders.map((o,i)=>`<div class="todo"><span class="tag">${esc(o.tag)}</span><span>${esc(o.s)}</span></div>`).join("")
+    : `<div class="empty">未偵測到明確的醫囑或追蹤安排。</div>`;
+}
+
+/* ---------- 補問清單 ---------- */
+function renderQuestions(results){
+  const box = document.getElementById("qList");
+  box.innerHTML = "";
+  const asked = [];
+  results.forEach(r=>{
+    const ulcerGroup = r.dom.ulcer;
+    const anyUlcer = results.find(x=>x.dom.key==="ulcerN").score>0
+                  || /傷口|潰瘍|破洞|流湯|潰爛/.test(LAST.raw);
+    if(ulcerGroup && !anyUlcer) return;
+    if(r.score===0 && !r.manual){
+      r.dom.qs.forEach(q=> asked.push({dom:r.dom.name, q}));
+    } else if(ulcerGroup && r.score===0){
+      r.dom.qs.forEach(q=> asked.push({dom:r.dom.name, q}));
+    }
+  });
+  if(asked.length===0){
+    box.innerHTML = `<div class="empty">✓ 對話已涵蓋十項評分所需資訊。仍建議理學檢查＋都卜勒超音波確認 CEAP 的解剖與病理分級。</div>`;
+    return;
+  }
+  asked.forEach((a,i)=>{
+    const div = document.createElement("div");
+    div.className="q";
+    div.innerHTML = `<span class="qi">${i+1}</span><span class="qt"><span style="color:#a98a4a">〔${a.dom}〕</span> ${a.q}</span>`;
+    box.appendChild(div);
+  });
+}
+
+/* ---------- 回診模式（沿用評分工具的解析與比較） ---------- */
+const CEAP_ORDER = ["C0","C1","C2","C3","C4a","C4b","C5","C6"];
+let FOLLOWUP = {on:false, prev:null};
+function parsePrev(s){
+  if(!s || !s.trim()) return null;
+  const p = {domains:{}};
+  const NUM = "(?<!\\d)(?<!\\d[\\/／])(?<![-–])(\\d{1,3})(?!\\d)(?!\\s*[-–]\\s*\\d)";
+  const ARR = "(?:\\s*(?:→|->|=>)\\s*)";
+  const last = (src, flags)=>{
+    const re = new RegExp(src, (flags||"").includes("g")?flags:(flags||"")+"g");
+    let m, r=null, c=0;
+    while((m=re.exec(s))!==null){ r=m; c++; if(m.index===re.lastIndex) re.lastIndex++; }
+    return {m:r, count:c};
+  };
+  const pick = (m,a,b)=> parseInt(m[a]!==undefined?m[a]:m[b],10);
+  let r;
+  r = last("VCSS[^\\n]{0,20}?"+NUM+"(?:\\s*[\\/／]\\s*30)?(?:"+ARR+NUM+")?\\s*[\\/／]\\s*30","i");
+  if(r.m){ const v=pick(r.m,2,1); if(v<=30) p.vcss=v; if(r.count>1) p.multi=true; }
+  r = last("CEAP[^C\\n]{0,24}?C\\s*([0-6])\\s*([ab])?(?:"+ARR+"C?\\s*([0-6])\\s*([ab])?)?","i");
+  if(r.m) p.ceap = r.m[3]!==undefined ? "C"+r.m[3]+(r.m[4]||"").toLowerCase() : "C"+r.m[1]+(r.m[2]||"").toLowerCase();
+  r = last("VDS[^\\n]{0,16}?"+NUM+"(?:"+ARR+NUM+")?","i");
+  if(r.m){ const v=pick(r.m,2,1); if(v<=3) p.vds=v; }
+  DOMAINS.forEach(d=>{
+    const rr = last(d.name.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"\\s*[:：]\\s*([0-3])","");
+    if(rr.m) p.domains[d.key]=parseInt(rr.m[1],10);
+  });
+  const any = p.vcss!=null||p.ceap!=null||p.vds!=null||Object.keys(p.domains).length>0;
+  return any ? p : null;
+}
+function toggleFollowUp(){
+  FOLLOWUP.on = document.getElementById("fuToggle").checked;
+  document.getElementById("fuBox").classList.toggle("hide", !FOLLOWUP.on);
+  prevChanged();
+}
+function prevChanged(){
+  FOLLOWUP.prev = FOLLOWUP.on ? parsePrev(document.getElementById("prevText").value) : null;
+  if(!LAST) return;
+  if(FOLLOWUP.on && FOLLOWUP.prev){ renderCompare(); document.getElementById("compareCard").classList.remove("hide"); }
+  else document.getElementById("compareCard").classList.add("hide");
+  if(!LAST.ccManual){ LAST.cc = genCC(); paintCC(); }
+  renderSummary();
+}
+function cmpArrow(prev, now, order){
+  if(prev==null || prev===undefined) return '<span class="hint">（無上次值）</span>';
+  let pi=prev, ni=now;
+  if(order){
+    pi=order.indexOf(prev); ni=order.indexOf(now);
+    if(pi<0 && prev==="C4") pi=order.indexOf("C4a");
+    if(pi<0 || ni<0) return '<span class="hint">—</span>';
+  }
+  if(ni<pi) return '<span style="color:#3f7d5c;font-weight:700">▼ 改善</span>';
+  if(ni>pi) return '<span style="color:#c05545;font-weight:700">▲ 惡化</span>';
+  return '<span style="color:#6b7d75;font-weight:700">— 持平</span>';
+}
+function renderCompare(){
+  const p = FOLLOWUP.prev; if(!p||!LAST) return;
+  const total = LAST.results.reduce((a,x)=>a+x.score,0);
+  const ceap = deriveCEAP(LAST.results).c;
+  const vds = LAST.vds ? LAST.vds.score : 0;
+  const stat = (lab, prev, now, denom, order)=>`
+    <div class="stat"><div class="lab">${lab}</div>
+      <div class="val" style="font-size:22px;padding-top:6px">${prev!=null?prev+" → ":""}${now}${denom?`<small style="font-size:12px;color:#6b7d75"> ${denom}</small>`:""}</div>
+      <div style="margin-top:4px;font-size:13px">${cmpArrow(prev, now, order)}</div></div>`;
+  let html = '';
+  if(p.multi) html += '<div class="hint" style="margin:0 0 8px;color:#c98a3a">⚠ 上次紀錄偵測到多組分數，已取最後一組（通常為最近一次）</div>';
+  html += '<div class="totals" style="margin-top:0">';
+  html += stat("VCSS 總分", p.vcss, total, "/30");
+  html += stat("CEAP", p.ceap, ceap, null, CEAP_ORDER);
+  html += stat("VDS", p.vds, vds);
+  html += '</div>';
+  if(Object.keys(p.domains).length){
+    html += '<div style="overflow-x:auto;margin-top:12px"><table><thead><tr><th>VCSS 項目</th><th>上次</th><th>本次</th><th>變化</th></tr></thead><tbody>';
+    LAST.results.forEach(r=>{
+      const pv = p.domains[r.dom.key];
+      html += `<tr><td class="dom">${r.dom.name}</td><td>${pv!=null?pv:"—"}</td>
+        <td><span class="sc sc${r.score}">${r.score}</span></td>
+        <td>${pv!=null?cmpArrow(pv,r.score):'<span class="hint">—</span>'}</td></tr>`;
+    });
+    html += '</tbody></table></div>';
+  }
+  document.getElementById("compareBody").innerHTML = html;
+}
+function refreshCC(){
+  if(!LAST) return;
+  if(!LAST.ccManual){ LAST.cc = genCC(); paintCC(); }
+  if(FOLLOWUP.on && FOLLOWUP.prev) renderCompare();
+}
+function scoreTail(){
+  const total = LAST.results.reduce((a,x)=>a+x.score,0);
+  const ceap = deriveCEAP(LAST.results).c;
+  const vds = LAST.vds ? LAST.vds.score : 0;
+  const p = (FOLLOWUP.on && FOLLOWUP.prev) ? FOLLOWUP.prev : {};
+  const f = (lab, prev, now, denom)=> lab+" "+((prev!=null&&prev!==now)?prev+"→":"")+now+(denom||"");
+  return f("VCSS", p.vcss, total, "/30")+"、"+f("CEAP", p.ceap, ceap)+"、"+f("VDS", p.vds, vds);
+}
+
+/* ---------- 主訴摘要（規則式組句，同評分工具） ---------- */
+function genCC(){
+  const raw = LAST.raw;
+  const by = {}; LAST.results.forEach(x=> by[x.dom.key]=x.score);
+  const ceap = deriveCEAP(LAST.results);
+
+  const both = /兩隻|兩腳|兩條腿|雙側|兩邊|兩腿|兩下肢|左右腳|左右腿/.test(raw);
+  const sideNormal = s => new RegExp(s+"(腳|腿|邊|側)?[^，。 ]{0,4}(正常|沒有問題|沒問題|沒事|好好的)").test(raw);
+  const L=/左/.test(raw)&&!sideNormal("左"), R=/右/.test(raw)&&!sideNormal("右");
+  const side=(both||(L&&R))?"雙側":L?"左":R?"右":"";
+  const hasCalf=/小腿/.test(raw), hasThigh=/大腿/.test(raw);
+  const loc=(hasCalf&&hasThigh)?"下肢":hasThigh?"大腿":hasCalf?"小腿":"下肢";
+
+  let dur="";
+  const dm = raw.match(/(?:青筋|靜脈曲張|血管|蜘蛛絲)[^。，,]{0,6}?(好幾年|十幾年|幾年|多年|[0-9一二三四五六七八九十]+年)/);
+  if(dm) dur = /^(好幾年|幾年|多年|十幾年)$/.test(dm[1]) ? "多年" : dm[1]+"餘";
+
+  const seg=[];
+  const vr = LAST.results.find(x=>x.dom.key==="veins");
+  const spider = (vr && vr.hit) ? /蜘蛛|微血管|網狀|細/.test(vr.hit) : /蜘蛛|微血管|網狀/.test(raw);
+  if(by.veins>0 && !spider) seg.push(side+loc+"靜脈曲張"+dur);
+  else if(spider) seg.push(side+loc+"微血管絲擴張"+dur);
+
+  const daily=/(每天|天天|每日).{0,6}?(痠|脹|痛|沉重|不舒服|抽筋)/.test(raw), std=/久站|站久|走久|久坐/.test(raw), pm=/下午|傍晚|晚上/.test(raw);
+  const im = raw.match(/影響(工作|上班|睡眠|走路|生活|日常|活動)/);
+  if(by.pain===3) seg.push("每日疼痛需止痛藥且明顯影響活動");
+  else if(by.pain===2) seg.push((daily?"每日":std?"久站後":"")+"痠脹沉重"+(im?"、影響"+im[1]:""));
+  else if(by.pain===1) seg.push((std?"久站後":"")+"偶有痠脹");
+
+  if(by.edema===3) seg.push("水腫達膝上");
+  else if(by.edema===2) seg.push((pm?"午後":"")+"小腿水腫");
+  else if(by.edema===1) seg.push((pm?"午後":"")+"足踝水腫"+(/早上|晨|隔天/.test(raw)?"、晨起消退":""));
+
+  const skin=[];
+  if(by.pigment>0) skin.push((by.pigment>=2?"小腿":"踝周")+"色素沉著");
+  if(by.indur>0) skin.push("皮膚硬化");
+  if(by.inflam>0) skin.push("濕疹搔癢");
+  if(skin.length) seg.push(skin.join("、"));
+
+  if(by.ulcerN>0){
+    const n=by.ulcerN>=3?"多處":by.ulcerN===2?"兩處":"一處";
+    const t=by.ulcerT===3?"逾年未癒":by.ulcerT===2?"數月未癒":"";
+    seg.push(n+"活動性潰瘍"+t);
+  } else if(ceap.c==="C5") seg.push("曾有潰瘍已癒合");
+
+  if(/不好看|難看|美觀|外觀/.test(raw)) seg.push("並有外觀困擾");
+  if(by.comp>0) seg.push(["","偶爾","經常","規律"][by.comp]+"使用彈性襪");
+  if(!seg.length) seg.push("下肢無明顯靜脈疾病相關症狀");
+
+  let parts=seg.slice();
+  let out=parts.join("，")+"。";
+  if(out.length>100){ parts=parts.filter(s=>!s.includes("彈性襪")); out=parts.join("，")+"。"; }
+  if(out.length>100) out=out.replace("、晨起消退","");
+
+  const posMention = (symRe, negRe)=> symRe.test(raw) && !negRe.test(raw);
+  const negs=[];
+  if(by.pain===0 && !posMention(/痛|痠|脹/, /不痛|不會痛|沒有痛|不痠|不會痠|不脹/)) negs.push("無疼痛");
+  if(by.edema===0 && !posMention(/腫/, /不腫|沒腫|沒有腫|不會腫|消腫/)) negs.push("無明顯水腫");
+  if(by.pigment===0&&by.indur===0&&by.inflam===0
+     && !posMention(/變黑|發黑|色素|變硬|癢|濕疹|變色/, /沒變黑|沒有變黑|沒變色|沒有變色|皮膚沒變|不癢/)) negs.push("無皮膚變化");
+  if(by.ulcerN===0&&ceap.c!=="C5"
+     && !posMention(/傷口|潰瘍|破洞/, /沒有傷口|沒傷口|無傷口|沒破|沒有破/)) negs.push("無潰瘍病史");
+  if(by.comp===0) negs.push("未使用彈性襪");
+  let body=out.slice(0,-1), i=0;
+  while((body+"。").length<50 && i<negs.length) body+="，"+negs[i++];
+
+  if(FOLLOWUP.on && FOLLOWUP.prev){
+    const totalNow = LAST.results.reduce((a,x)=>a+x.score,0);
+    const pv = FOLLOWUP.prev.vcss;
+    const trend = pv==null ? "" : totalNow<pv ? "，整體較前改善" : totalNow>pv ? "，整體較前惡化" : "，整體大致同前";
+    body = "回診"+trend+"："+body;
+  }
+  return body+"。（"+scoreTail()+"）";
+}
+function paintCC(){
+  document.getElementById("ccText").value = LAST.cc||"";
+  ccCountPaint();
+}
+function ccCountPaint(){
+  const n=(LAST.cc||"").length;
+  const el=document.getElementById("ccCount");
+  el.textContent = n?`${n} 字${n<55?"・偏短":n>145?"・偏長":""}`:"";
+  el.style.color = (n<55||n>145)?"#c98a3a":"#6b7d75";
+}
+function onCCInput(){
+  LAST.cc=document.getElementById("ccText").value;
+  LAST.ccManual=true;
+  ccCountPaint(); renderSummary();
+}
+function regenCC(){
+  LAST.cc=genCC(); LAST.ccManual=false; paintCC(); renderSummary();
+}
+function copyCC(){
+  navigator.clipboard.writeText(LAST.cc||"").then(()=>{
+    const m=document.getElementById("ccMsg");
+    m.textContent="✓ 已複製"; m.style.color="#3f7d5c";
+    setTimeout(()=>m.textContent="",2500);
+  });
+}
+
+/* ---------- 病歷摘要 ---------- */
+function renderSummary(){
+  const r = LAST.results;
+  const total = r.reduce((a,x)=>a+x.score,0);
+  const ceap = deriveCEAP(r);
+  const detail = r.filter(x=>x.score>0).map(x=>`${x.dom.name}${x.score}`).join("、") || "各項均為 0";
+  const missing = [];
+  r.forEach(x=>{ if(x.score===0 && !x.manual && !x.dom.ulcer) missing.push(x.dom.name); });
+  const vds = LAST.vds ? LAST.vds.score : 0;
+  const vdsLabel = ["無症狀","有症狀但不需壓力治療","需彈性襪／抬腳維持活動","即使彈性襪＋抬腳仍受限"][vds];
+
+  const txLine = LAST.treatments.length ? LAST.treatments.map(t=>t.name).join("、") : "無";
+  const feeLine = LAST.fees.length ? LAST.fees.map(f=>f.amount).join("、") : "";
+  const ccats = LAST.concerns.cats.map(c=>`${c.name}（${c.quotes[0]?"「"+c.quotes[0]+"」":""}）`).join("；");
+  const orders = LAST.orders.map((o,i)=>`  ${i+1}. 〔${o.tag}〕${o.s}`).join("\n");
+
+  let cmpLine = "";
+  if(FOLLOWUP.on && FOLLOWUP.prev){
+    const p = FOLLOWUP.prev, bits = [];
+    if(p.vcss!=null) bits.push(`VCSS ${p.vcss}→${total}${total===p.vcss?"（持平）":total<p.vcss?`（改善 ${p.vcss-total} 分）`:`（惡化 ${total-p.vcss} 分）`}`);
+    if(p.ceap) bits.push(`CEAP ${p.ceap}→${ceap.c}`);
+    if(p.vds!=null) bits.push(`VDS ${p.vds}→${vds}`);
+    if(bits.length) cmpLine = `\n\n【回診比較（上次→本次）】\n${bits.join("；")}`;
+  }
+
+  const chartNo = document.getElementById("chartNo").value.trim();
+  const txt =
+`${chartNo?`病歷號：${chartNo}\n`:""}主訴：${LAST.cc||""}
+
+【VCSS 靜脈臨床嚴重度評分】
+VCSS 總分：${total} / 30（${sevText(total)}）
+陽性項目：${detail}
+CEAP 臨床分級（依對話推定）：${ceap.c}　${ceap.desc}
+　＊E/A/P 分級需都卜勒超音波確認
+【VDS 靜脈失能評分】${vds} — ${vdsLabel}${LAST.dvt?"\n【DVT 註記】對話提及血栓／DVT，建議加做 Villalta 評估":""}
+
+【治療方案討論】${txLine}${feeLine?`\n費用討論：${feeLine}`:""}
+【病人疑慮】${ccats||"無明顯疑慮"}
+【醫囑・待辦】
+${orders||"  （無明確醫囑）"}
+【決策狀態】${LAST.decision.label.replace(/^[^\s]+\s/,"")}${cmpLine}
+
+待補問／未涵蓋項目：${missing.length?missing.join("、"):"無明顯缺口"}
+
+（本分析由門診對話文字稿自動解析初判，經醫師臨床判斷校正）`;
+  document.getElementById("summary").textContent = txt;
+}
+function sevText(t){ return t<=5?"輕微":t<=10?"輕–中度":t<=20?"中–重度":"嚴重"; }
+
+/* =====================================================================
+   Google Drive 連動（與 VCSS 評分工具共用設定與 Apps Script 接收器）
+   ===================================================================== */
+function driveCfg(){ try{ return JSON.parse(localStorage.getItem("vcssDriveCfg")||"{}"); }catch(_){ return {}; } }
+function loadDriveCfg(){
+  const c = driveCfg();
+  document.getElementById("gasUrl").value = c.url||"";
+  document.getElementById("gasToken").value = c.token||"";
+  document.getElementById("autoUpload").checked = !!c.autoAnalysis;
+}
+function saveDriveCfg(){
+  const cfg = Object.assign(driveCfg(), {
+    url: document.getElementById("gasUrl").value.trim(),
+    token: document.getElementById("gasToken").value.trim(),
+    autoAnalysis: document.getElementById("autoUpload").checked
+  });
+  localStorage.setItem("vcssDriveCfg", JSON.stringify(cfg));
+  const m = document.getElementById("cfgMsg");
+  m.textContent = "✓ 已儲存在此裝置"; m.style.color = "#3f7d5c";
+  setTimeout(()=> m.textContent="", 2500);
+}
+async function gasCall(payload, msgEl){
+  const c = driveCfg();
+  if(!c.url){
+    if(msgEl){ msgEl.textContent = "尚未設定連動 → 頁面底部「⚙ Google Drive 連動設定」"; msgEl.style.color="#c98a3a"; }
+    document.getElementById("driveCard").querySelector("details").open = true;
+    return null;
+  }
+  const res = await fetch(c.url, {method:"POST",
+    headers:{"Content-Type":"text/plain;charset=utf-8"},
+    body: JSON.stringify(Object.assign({token:c.token||""}, payload))});
+  return res.json();
+}
+
+/* 抓病人資料夾的文字稿清單 */
+async function driveList(){
+  const m = document.getElementById("driveListMsg");
+  const chart = document.getElementById("chartNo").value.trim();
+  if(!chart){ m.textContent="請先填病歷號"; m.style.color="#c98a3a";
+    document.getElementById("chartNo").focus(); return; }
+  m.textContent = "📂 讀取中…"; m.style.color="#6b7d75";
+  try{
+    const j = await gasCall({action:"list", chartNo:chart}, m);
+    if(!j) return;
+    if(!j.ok){ m.textContent = "✗ "+(j.error||"讀取失敗"); m.style.color="#c05545"; return; }
+    renderFileList(j);
+    m.textContent = j.files.length ? `✓ ${j.folder}：${j.files.length} 個檔案` : `資料夾「${j.folder}」沒有文字檔`;
+    m.style.color = "#3f7d5c";
+    // 有上次 VCSS／分析紀錄 → 自動帶入回診比較
+    const prev = j.files.find(f=> f.type==="vcss" || f.type==="analysis");
+    if(prev && !document.getElementById("prevText").value.trim()){
+      const pj = await gasCall({action:"get", fileId:prev.id});
+      if(pj && pj.ok){
+        document.getElementById("prevText").value = pj.content.slice(0, 4000);
+        document.getElementById("fuToggle").checked = true;
+        toggleFollowUp();
+        m.textContent += "，已帶入上次紀錄（回診比較）";
+      }
+    }
+  }catch(err){
+    m.textContent = "✗ 連線失敗：檢查網址是否 /exec 結尾、腳本是否已重新部署最新版"; m.style.color="#c05545";
+  }
+}
+function renderFileList(j){
+  const el = document.getElementById("fileList");
+  if(!j.files.length){ el.classList.add("hide"); el.innerHTML=""; return; }
+  const icon = t => t==="transcript"?"🎙":t==="vcss"?"📊":"📄";
+  const tName = t => t==="transcript"?"文字稿":t==="vcss"?"VCSS紀錄":"分析紀錄";
+  el.innerHTML = `<div class="filelist">`+j.files.map(f=>
+    `<div class="file" onclick="driveGet('${f.id}', this)">
+      <span class="fi">${icon(f.type)}</span>
+      <span class="fn">${esc(f.name)}${f.path?`<span style="color:#93a29a;font-weight:400;font-size:12px">　${esc(f.path)}</span>`:""}</span>
+      <span class="ft ft-${f.type}">${tName(f.type)}</span>
+      <span class="fd">${esc((f.updated||"").slice(0,16).replace("T"," "))}</span>
+    </div>`).join("")+`</div>
+    <div class="hint">點一下檔案 → 內容載入上方輸入框並自動分析（🎙 文字稿）；📊 VCSS／分析紀錄則帶入「上次紀錄」做回診比較。</div>`;
+  el.classList.remove("hide");
+}
+async function driveGet(fileId, rowEl){
+  const m = document.getElementById("driveListMsg");
+  m.textContent = "⬇ 下載中…"; m.style.color="#6b7d75";
+  try{
+    const j = await gasCall({action:"get", fileId}, m);
+    if(!j) return;
+    if(!j.ok){ m.textContent="✗ "+(j.error||"下載失敗"); m.style.color="#c05545"; return; }
+    if(/VCSS|分析/.test(j.name||"")){
+      document.getElementById("prevText").value = j.content.slice(0, 4000);
+      document.getElementById("fuToggle").checked = true;
+      toggleFollowUp();
+      m.textContent = "✓ 已帶入上次紀錄（回診比較）"; m.style.color="#3f7d5c";
+    } else {
+      document.getElementById("input").value = j.content;
+      m.textContent = "✓ 已載入「"+j.name+"」，自動分析中"; m.style.color="#3f7d5c";
+      run();
+    }
+  }catch(err){ m.textContent="✗ 下載失敗"; m.style.color="#c05545"; }
+}
+
+/* 自動監看：每 30 秒問一次有沒有新文字稿，有就載入自動分析 */
+let watchTimer = null, watchSince = null;
+function toggleWatch(){
+  const btn = document.getElementById("watchBtn");
+  const m = document.getElementById("driveListMsg");
+  if(watchTimer){
+    clearInterval(watchTimer); watchTimer=null;
+    btn.classList.remove("on"); btn.textContent="👁 自動監看";
+    m.textContent="已停止監看"; m.style.color="#6b7d75";
+    return;
+  }
+  const chart = document.getElementById("chartNo").value.trim();
+  if(!chart){ m.textContent="請先填病歷號再開監看"; m.style.color="#c98a3a"; return; }
+  if(!driveCfg().url){ m.textContent="請先設定 Google Drive 連動"; m.style.color="#c98a3a";
+    document.getElementById("driveCard").querySelector("details").open = true; return; }
+  watchSince = new Date().toISOString();
+  btn.classList.add("on"); btn.textContent="👁 監看中（每30秒）";
+  m.textContent="開始監看病歷號 "+chart+" 的資料夾，新文字稿一進來就自動分析"; m.style.color="#4a6d8c";
+  const tick = async ()=>{
+    const chartNow = document.getElementById("chartNo").value.trim();
+    if(!chartNow) return;
+    try{
+      const j = await gasCall({action:"latest", chartNo:chartNow, since:watchSince});
+      if(j && j.ok && !j.noNew && j.content){
+        watchSince = j.updated || new Date().toISOString();
+        document.getElementById("input").value = j.content;
+        m.textContent = "🔔 偵測到新文字稿「"+j.name+"」，已自動分析"; m.style.color="#3f7d5c";
+        run();
+        try{ new AudioContext().close(); }catch(_){}
+        if(Notification && Notification.permission==="granted")
+          new Notification("門診對話分析器", {body:"新文字稿："+j.name+" 已自動分析"});
+      }
+    }catch(_){}
+  };
+  if(window.Notification && Notification.permission==="default") Notification.requestPermission();
+  watchTimer = setInterval(tick, 30000);
+  tick();
+}
+
+/* 上傳分析結果 */
+async function uploadDrive(){
+  const m = document.getElementById("driveMsg");
+  if(!LAST){ m.textContent = "請先分析"; m.style.color="#c98a3a"; return; }
+  const chart = document.getElementById("chartNo").value.trim();
+  if(!chart){ m.textContent = "請先填病歷號（最上方）"; m.style.color="#c98a3a";
+    document.getElementById("chartNo").focus(); return; }
+  const by = {}; LAST.results.forEach(r=> by[r.dom.key]=r.score);
+  const payload = {
+    action: "saveAnalysis",
+    chartNo: chart,
+    visitType: (FOLLOWUP.on && FOLLOWUP.prev) ? "回診" : "初診",
+    vcss: LAST.results.reduce((a,x)=>a+x.score,0),
+    domains: by,
+    ceap: deriveCEAP(LAST.results).c,
+    vds: LAST.vds ? LAST.vds.score : 0,
+    cc: LAST.cc||"",
+    treatments: LAST.treatments.map(t=>t.name).join("、"),
+    concerns: LAST.concerns.cats.map(c=>c.name).join("、"),
+    orders: LAST.orders.map(o=>o.s).join("；"),
+    decision: LAST.decision.label.replace(/^[^\s]+\s/,""),
+    summary: document.getElementById("summary").textContent
+  };
+  m.textContent = "☁ 上傳中…"; m.style.color = "#6b7d75";
+  try{
+    const j = await gasCall(payload, m);
+    if(!j) return;
+    if(j.ok){ m.textContent = "✓ "+(j.msg||"已寫入 Google Drive"); m.style.color = "#3f7d5c"; }
+    else{ m.textContent = "✗ "+(j.error||"寫入失敗"); m.style.color = "#c05545"; }
+  }catch(err){
+    m.textContent = "✗ 上傳失敗：請檢查網址是否為 /exec 結尾、網路是否正常"; m.style.color = "#c05545";
+  }
+}
+
+/* ---------- 工具 ---------- */
+function esc(s){ return String(s??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;"); }
+function copySum(){
+  const t = document.getElementById("summary").textContent;
+  navigator.clipboard.writeText(t).then(()=>{
+    const m=document.getElementById("copyMsg");
+    m.textContent="✓ 已複製到剪貼簿"; m.style.color="#3f7d5c";
+    setTimeout(()=>m.textContent="",2500);
+  });
+}
+function clearAll(){
+  clearTimeout(autoTimer);
+  document.getElementById("input").value="";
+  document.getElementById("fileList").classList.add("hide");
+  ["overviewCard","resultCard","compareCard","txCard","concernCard","todoCard","qCard","sumCard"]
+    .forEach(id=>document.getElementById(id).classList.add("hide"));
+}
+
+const EXAMPLES = [
+  {t:"初診諮詢（有標記）", v:`醫師：阿姨你好，今天哪裡不舒服？
+病人：我這個左腳小腿，青筋浮出來一條一條的，已經好幾年了。
+醫師：站久了會痠脹嗎？
+病人：會，下午更明顯，腳踝也會腫，襪子都勒出一圈。
+醫師：會不會痛到要吃止痛藥？
+病人：不用啦，就痠痠的。
+醫師：皮膚有沒有變黑，或是破過傷口？
+病人：沒有。
+醫師：有沒有在穿彈性襪？
+病人：買過，偶爾穿。
+醫師：超音波看起來是大隱靜脈逆流。可以考慮低溫微波消融，不想穿彈性襪的話也有Venaseal膠水黏合。
+病人：那個要多少錢？會不會很痛？
+醫師：都是局部麻醉、當天回家。膠水這隻腳大概9萬8。先幫你排兩週後回診看超音波報告，這段時間白天穿彈性襪。
+病人：好，我回去跟家人討論一下。`},
+  {t:"回診（術後追蹤）", v:`醫師：開完刀一個月了，恢復得怎麼樣？
+病人：好很多，以前每天痠脹，現在站一整天只剩一點點痠。
+醫師：還會腫嗎？
+病人：不太腫了，偶爾下午腳踝有一點。
+醫師：皮膚那塊黑黑的有變淡嗎？
+病人：有變淡一點，還有一點咖啡色。
+醫師：傷口都癒合了，彈性襪現在多常穿？
+病人：每天都穿。
+醫師：很好，三個月後回來照一次超音波追蹤就可以了。`},
+  {t:"無標記逐字稿", v:`今天是哪裡不舒服 右腳整條腿都是浮起來的血管 大腿到小腿都有 站久就很脹很痛 每天都不舒服 有影響工作嗎 有 我做美髮一直站 到下午都要坐下來休息 皮膚有變化嗎 腳踝內側變黑一圈 摸起來硬硬的 之前有破一個小傷口 好幾個月了都沒好 大概一公分 有穿彈性襪嗎 沒有 穿不住 這樣潰瘍拖著不會自己好 我建議安排超音波 然後考慮雷射消融手術把逆流的血管處理掉 費用大概多少 看範圍 大概8萬到10萬 可以用實支實付的保險 好 那我先做檢查`},
+];
+function loadExamples(){
+  const box=document.getElementById("examples");
+  EXAMPLES.forEach(e=>{
+    const s=document.createElement("span");
+    s.textContent="▸ "+e.t;
+    s.onclick=()=>{ document.getElementById("input").value=e.v; run(); };
+    box.appendChild(s);
+  });
+}
+loadExamples();
+loadDriveCfg();
+</script>
